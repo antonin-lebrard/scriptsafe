@@ -1,129 +1,140 @@
 // ScriptSafe - Copyright (C) andryou
 // Distributed under the terms of the GNU General Public License
 // The GNU General Public License can be found in the gpl.txt file. Alternatively, see <http://www.gnu.org/licenses/>.
-var savedBeforeloadEvents = new Array();
+var savedBeforeloadEvents = [];
 var timer;
 var iframe = 0;
 var clipboard = false;
 var timestamp = Math.round(new Date().getTime()/1000.0);
 var linktrgt;
 // initialize settings object with default settings (that are overwritten by the actual user-set values later on)
+/**
+ * @type {{MODE: string, LISTSTATUS: boolean, DOMAINSTATUS: number, WHITELIST: Array, BLACKLIST: Array, WHITELISTSESSION: Array, BLACKLISTSESSION: Array, SCRIPT: boolean, NOSCRIPT: boolean, OBJECT: boolean, APPLET: boolean, EMBED: boolean, IFRAME: boolean, FRAME: boolean, AUDIO: boolean, VIDEO: boolean, IMAGE: boolean, CANVAS: boolean, CANVASFONT: boolean, CLIENTRECTS: boolean, AUDIOBLOCK: boolean, BATTERY: boolean, WEBGL: boolean, KEYBOARD: boolean, WEBRTCDEVICE: boolean, GAMEPAD: boolean, WEBVR: boolean, BLUETOOTH: boolean, TIMEZONE: boolean, ANNOYANCES: boolean, ANNOYANCESMODE: string, ANTISOCIAL: boolean, PRESERVESAMEDOMAIN: *, WEBBUGS: boolean, LINKTARGET: string, EXPERIMENTAL: number, REFERRER: *, REFERRERSPOOFDENYWHITELISTED: boolean, PARANOIA: boolean, CLIPBOARD: boolean, DATAURL: boolean, KEYDELTA: number}}
+ */
 var SETTINGS = {
-	"MODE": "block",
-	"LISTSTATUS": "false",
-	"DOMAINSTATUS": "-1",
-	"WHITELIST": "",
-	"BLACKLIST": "",
-	"WHITELISTSESSION": "",
-	"BLACKLISTSESSION": "",
-	"SCRIPT": "true",
-	"NOSCRIPT": "true",
-	"OBJECT": "true",
-	"APPLET": "true",
-	"EMBED": "true",
-	"IFRAME": "true",
-	"FRAME": "true",
-	"AUDIO": "true",
-	"VIDEO": "true",
-	"IMAGE": "false",
-	"CANVAS": "false",
-	"CANVASFONT": "false",
-	"CLIENTRECTS": "false",
-	"AUDIOBLOCK": "false",
-	"BATTERY": "false",
-	"WEBGL": "false",
-	"KEYBOARD": "false",
-	"WEBRTCDEVICE": "false",
-	"GAMEPAD": "false",
-	"WEBVR": "false",
-	"BLUETOOTH": "false",
-	"TIMEZONE": "false",
-	"ANNOYANCES": "false",
-	"ANNOYANCESMODE": "relaxed",
-	"ANTISOCIAL": "false",
-	"PRESERVESAMEDOMAIN": "false",
-	"WEBBUGS": "true",
-	"LINKTARGET": "off",
-	"EXPERIMENTAL": "0",
-	"REFERRER": "true",
-	"REFERRERSPOOFDENYWHITELISTED": "true",
-	"PARANOIA": "true",
-	"CLIPBOARD": "false",
-	"DATAURL": "true",
-	"KEYDELTA": 0,
+	MODE: "block",
+	LISTSTATUS: false,
+	DOMAINSTATUS: -1,
+	WHITELIST: [],
+	BLACKLIST: [],
+	WHITELISTSESSION: [],
+	BLACKLISTSESSION: [],
+	SCRIPT: true,
+	NOSCRIPT: true,
+	OBJECT: true,
+	APPLET: true,
+	EMBED: true,
+	IFRAME: true,
+	FRAME: true,
+	AUDIO: true,
+	VIDEO: true,
+	IMAGE: false,
+	CANVAS: false,
+	CANVASFONT: false,
+	CLIENTRECTS: false,
+	AUDIOBLOCK: false,
+	BATTERY: false,
+	WEBGL: false,
+	KEYBOARD: false,
+	WEBRTCDEVICE: false,
+	GAMEPAD: false,
+	WEBVR: false,
+	BLUETOOTH: false,
+	TIMEZONE: false,
+	ANNOYANCES: false,
+	ANNOYANCESMODE: "relaxed",
+	ANTISOCIAL: false,
+	PRESERVESAMEDOMAIN: false,
+	WEBBUGS: true,
+	LINKTARGET: "off",
+	EXPERIMENTAL: 0,
+	REFERRER: true,
+	REFERRERSPOOFDENYWHITELISTED: true,
+	PARANOIA: true,
+	CLIPBOARD: false,
+	DATAURL: true,
+	KEYDELTA: 0,
 };
 document.addEventListener("beforeload", saveBeforeloadEvent, true); // eventually remove
-if (window.self != window.top) iframe = 1;
+if (window.self !== window.top) iframe = 1;
 chrome.extension.sendRequest({reqtype: "get-settings", iframe: iframe}, function(response) {
     document.removeEventListener("beforeload", saveBeforeloadEvent, true); // eventually remove
-	if (typeof response === 'object' && response.status == 'true') {
-		SETTINGS['MODE'] = response.mode;
-		SETTINGS['ANNOYANCES'] = response.annoyances;
-		SETTINGS['ANNOYANCESMODE'] = response.annoyancesmode;
-		SETTINGS['ANTISOCIAL'] = response.antisocial;
-		SETTINGS['WHITELIST'] = response.whitelist;
-		SETTINGS['BLACKLIST'] = response.blacklist;	
-		SETTINGS['WHITELISTSESSION'] = response.whitelistSession;
-		SETTINGS['BLACKLISTSESSION'] = response.blackListSession;
-		SETTINGS['SCRIPT'] = response.script;
-		SETTINGS['PRESERVESAMEDOMAIN'] = response.preservesamedomain;
-		SETTINGS['EXPERIMENTAL'] = response.experimental;
-		SETTINGS['DOMAINSTATUS'] = domainCheck(window.location.href, 1);
-		if (SETTINGS['EXPERIMENTAL'] == '0' && (((SETTINGS['PRESERVESAMEDOMAIN'] == 'false' || (SETTINGS['PRESERVESAMEDOMAIN'] != 'false' && SETTINGS['DOMAINSTATUS'] == '1')) && response.enable == 'true' && SETTINGS['SCRIPT'] == 'true' && SETTINGS['DOMAINSTATUS'] != '0') || ((SETTINGS['ANNOYANCES'] == 'true' && (SETTINGS['ANNOYANCESMODE'] == 'strict' || (SETTINGS['ANNOYANCESMODE'] == 'relaxed' && SETTINGS['DOMAINSTATUS'] != '0')) && baddies(window.location.hostname, SETTINGS['ANNOYANCESMODE'], SETTINGS['ANTISOCIAL']) == '1') || (SETTINGS['ANTISOCIAL'] == 'true' && baddies(window.location.hostname, SETTINGS['ANNOYANCESMODE'], SETTINGS['ANTISOCIAL']) == '2'))))
-			mitigate();
-		SETTINGS['LISTSTATUS'] = response.enable;
-		SETTINGS['NOSCRIPT'] = response.noscript;
-		SETTINGS['OBJECT'] = response.object;
-		SETTINGS['APPLET'] = response.applet;
-		SETTINGS['EMBED'] = response.embed;
-		SETTINGS['IFRAME'] = response.iframe;
-		SETTINGS['FRAME'] = response.frame;
-		SETTINGS['AUDIO'] = response.audio;
-		SETTINGS['VIDEO'] = response.video;
-		SETTINGS['IMAGE'] = response.image;
-		SETTINGS['CANVAS'] = response.canvas;
-		SETTINGS['CANVASFONT'] = response.canvasfont;
-		SETTINGS['CLIENTRECTS'] = response.clientrects;
-		SETTINGS['AUDIOBLOCK'] = response.audioblock;
-		SETTINGS['BATTERY'] = response.battery;
-		SETTINGS['WEBGL'] = response.webgl;
-		SETTINGS['WEBRTCDEVICE'] = response.webrtcdevice;
-		SETTINGS['GAMEPAD'] = response.gamepad;
-		SETTINGS['WEBVR'] = response.webvr;
-		SETTINGS['BLUETOOTH'] = response.bluetooth;
-		SETTINGS['TIMEZONE'] = response.timezone;
-		SETTINGS['CLIPBOARD'] = response.clipboard;
-		if (SETTINGS['CANVAS'] != 'false' && response.fp_canvas != '-1') SETTINGS['CANVAS'] = 'false';
-		if (SETTINGS['CANVASFONT'] == 'true' && response.fp_canvasfont != '-1') SETTINGS['CANVASFONT'] = 'false';
-		if (SETTINGS['AUDIOBLOCK'] == 'true' && response.fp_audio != '-1') SETTINGS['AUDIOBLOCK'] = 'false';
-		if (SETTINGS['WEBGL'] == 'true' && response.fp_webgl != '-1') SETTINGS['WEBGL'] = 'false';
-		if (SETTINGS['BATTERY'] == 'true' && response.fp_battery != '-1') SETTINGS['BATTERY'] = 'false';
-		if (SETTINGS['WEBRTCDEVICE'] == 'true' && response.fp_device != '-1') SETTINGS['WEBRTCDEVICE'] = 'false';
-		if (SETTINGS['GAMEPAD'] == 'true' && response.fp_gamepad != '-1') SETTINGS['GAMEPAD'] = 'false';
-		if (SETTINGS['WEBVR'] == 'true' && response.fp_webvr != '-1') SETTINGS['WEBVR'] = 'false';
-		if (SETTINGS['BLUETOOTH'] == 'true' && response.fp_bluetooth != '-1') SETTINGS['BLUETOOTH'] = 'false';
-		if (SETTINGS['CLIENTRECTS'] == 'true' && response.fp_clientrectangles != '-1') SETTINGS['CLIENTRECTS'] = 'false';
-		if (SETTINGS['CLIPBOARD'] == 'true' && response.fp_clipboard != '-1') SETTINGS['CLIPBOARD'] = 'false';
-		if (SETTINGS['CANVAS'] != 'false' || SETTINGS['CANVASFONT'] == 'true' || SETTINGS['CLIENTRECTS'] == 'true' || SETTINGS['AUDIOBLOCK'] == 'true' || SETTINGS['BATTERY'] == 'true' || SETTINGS['WEBGL'] == 'true' || SETTINGS['WEBRTCDEVICE'] == 'true' || SETTINGS['GAMEPAD'] == 'true' || SETTINGS['WEBVR'] == 'true' || SETTINGS['BLUETOOTH'] == 'true' || SETTINGS['TIMEZONE'] != 'false' || SETTINGS['CLIPBOARD'] == 'true') {
+	if (typeof response === 'object' && response.status === true) {
+		SETTINGS.MODE = response.mode;
+		SETTINGS.ANNOYANCES = response.annoyances;
+		SETTINGS.ANNOYANCESMODE = response.annoyancesmode;
+		SETTINGS.ANTISOCIAL = response.antisocial;
+		SETTINGS.WHITELIST = response.whitelist;
+		SETTINGS.BLACKLIST = response.blacklist;
+		SETTINGS.WHITELISTSESSION = response.whitelistSession;
+		SETTINGS.BLACKLISTSESSION = response.blackListSession;
+		SETTINGS.SCRIPT = response.script;
+		SETTINGS.PRESERVESAMEDOMAIN = response.preservesamedomain;
+		SETTINGS.EXPERIMENTAL = response.experimental;
+		SETTINGS.DOMAINSTATUS = domainCheck(window.location.href, 1);
+		if (SETTINGS.EXPERIMENTAL === 0){
+		    var checkDomain = (SETTINGS.PRESERVESAMEDOMAIN === false || (SETTINGS.PRESERVESAMEDOMAIN !== false && SETTINGS.DOMAINSTATUS === 1))
+                                && response.enable === true && SETTINGS.SCRIPT === true && SETTINGS.DOMAINSTATUS !== 0;
+		    var checkAnnoyance = SETTINGS.ANNOYANCES === true && (SETTINGS.ANNOYANCESMODE === 'strict' || (SETTINGS.ANNOYANCESMODE === 'relaxed' && SETTINGS.DOMAINSTATUS !== 0))
+                                && baddies(window.location.hostname, SETTINGS.ANNOYANCESMODE, SETTINGS.ANTISOCIAL) === 1;
+		    var checkAntisocial = SETTINGS.ANTISOCIAL === true && baddies(window.location.hostname, SETTINGS.ANNOYANCESMODE, SETTINGS.ANTISOCIAL) === 2;
+            if (checkDomain || checkAnnoyance|| checkAntisocial)
+                mitigate();
+        }
+		SETTINGS.LISTSTATUS = response.enable;
+		SETTINGS.NOSCRIPT = response.noscript;
+		SETTINGS.OBJECT = response.object;
+		SETTINGS.APPLET = response.applet;
+		SETTINGS.EMBED = response.embed;
+		SETTINGS.IFRAME = response.iframe;
+		SETTINGS.FRAME = response.frame;
+		SETTINGS.AUDIO = response.audio;
+		SETTINGS.VIDEO = response.video;
+		SETTINGS.IMAGE = response.image;
+		SETTINGS.CANVAS = response.canvas;
+		SETTINGS.CANVASFONT = response.canvasfont;
+		SETTINGS.CLIENTRECTS = response.clientrects;
+		SETTINGS.AUDIOBLOCK = response.audioblock;
+		SETTINGS.BATTERY = response.battery;
+		SETTINGS.WEBGL = response.webgl;
+		SETTINGS.WEBRTCDEVICE = response.webrtcdevice;
+		SETTINGS.GAMEPAD = response.gamepad;
+		SETTINGS.WEBVR = response.webvr;
+		SETTINGS.BLUETOOTH = response.bluetooth;
+		SETTINGS.TIMEZONE = response.timezone;
+		SETTINGS.CLIPBOARD = response.clipboard;
+		if (SETTINGS.CANVAS !== false && response.fp_canvas !== -1) SETTINGS.CANVAS = false;
+		if (SETTINGS.CANVASFONT === true && response.fp_canvasfont !== -1) SETTINGS.CANVASFONT = false;
+		if (SETTINGS.AUDIOBLOCK === true && response.fp_audio !== -1) SETTINGS.AUDIOBLOCK = false;
+		if (SETTINGS.WEBGL === true && response.fp_webgl !== -1) SETTINGS.WEBGL = false;
+		if (SETTINGS.BATTERY === true && response.fp_battery !== -1) SETTINGS.BATTERY = false;
+		if (SETTINGS.WEBRTCDEVICE === true && response.fp_device !== -1) SETTINGS.WEBRTCDEVICE = false;
+		if (SETTINGS.GAMEPAD === true && response.fp_gamepad !== -1) SETTINGS.GAMEPAD = false;
+		if (SETTINGS.WEBVR === true && response.fp_webvr !== -1) SETTINGS.WEBVR = false;
+		if (SETTINGS.BLUETOOTH === true && response.fp_bluetooth !== -1) SETTINGS.BLUETOOTH = false;
+		if (SETTINGS.CLIENTRECTS === true && response.fp_clientrectangles !== -1) SETTINGS.CLIENTRECTS = false;
+		if (SETTINGS.CLIPBOARD === true && response.fp_clipboard !== -1) SETTINGS.CLIPBOARD = false;
+		if (SETTINGS.CANVAS !== false || SETTINGS.CANVASFONT === true || SETTINGS.CLIENTRECTS === true || SETTINGS.AUDIOBLOCK === true || SETTINGS.BATTERY === true || SETTINGS.WEBGL === true || SETTINGS.WEBRTCDEVICE === true || SETTINGS.GAMEPAD === true || SETTINGS.WEBVR === true || SETTINGS.BLUETOOTH === true || SETTINGS.TIMEZONE !== false || SETTINGS.CLIPBOARD === true) {
 			fingerprintProtection();
 		}
-		SETTINGS['WEBBUGS'] = response.webbugs;
-		SETTINGS['LINKTARGET'] = response.linktarget;
-		if (SETTINGS['LINKTARGET'] == 'same') linktrgt = '_self';
-		else if (SETTINGS['LINKTARGET'] == 'new') linktrgt = '_blank';
-		SETTINGS['REFERRER'] = response.referrer;
-		SETTINGS['REFERRERSPOOFDENYWHITELISTED'] = response.referrerspoofdenywhitelisted;
-		SETTINGS['PARANOIA'] = response.paranoia;
-		SETTINGS['DATAURL'] = response.dataurl;
-		SETTINGS['KEYBOARD'] = response.keyboard;
-		SETTINGS['KEYDELTA'] = parseInt(response.keydelta);
+		SETTINGS.WEBBUGS = response.webbugs;
+		SETTINGS.LINKTARGET = response.linktarget;
+		if (SETTINGS.LINKTARGET === 'same') linktrgt = '_self';
+		else if (SETTINGS.LINKTARGET === 'new') linktrgt = '_blank';
+		SETTINGS.REFERRER = response.referrer;
+		SETTINGS.REFERRERSPOOFDENYWHITELISTED = response.referrerspoofdenywhitelisted;
+		SETTINGS.PARANOIA = response.paranoia;
+		SETTINGS.DATAURL = response.dataurl;
+		SETTINGS.KEYBOARD = response.keyboard;
+		SETTINGS.KEYDELTA = parseInt(response.keydelta);
 		$(document).ready(function() {
 			loaded();
-			if (SETTINGS['KEYBOARD'] == 'true') {
-				$('div, :input').keyup(randomDelay);
-				$('div, :input').keydown(randomDelay);
+			if (SETTINGS.KEYBOARD === true) {
+				var divInput = $('div, :input');
+				divInput.keyup(randomDelay);
+                divInput.keydown(randomDelay);
 			}
-			if (SETTINGS['CLIPBOARD'] == 'true') {
+			if (SETTINGS.CLIPBOARD === true) {
 				clipboardProtect(window);
 				clipboardProtect(document);
 			}
@@ -138,10 +149,10 @@ function fingerprintProtection() {
 	injectAnon(function(canvas, canvasfont, audioblock, battery, webgl, webrtcdevice, gamepad, webvr, bluetooth, timezone, clientrects, clipboard){
 		function processFunctions(scope) {
 			/* Canvas */
-			if (canvas != 'false') {
+			if (canvas !== false) {
 				var fakecanvas = scope.document.createElement('canvas');
 				fakecanvas.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_canvas';
-				if (canvas == 'random') {
+				if (canvas === 'random') {
 					var fakewidth = fakecanvas.width = Math.floor(Math.random() * 999) + 1;
 					var fakeheight = fakecanvas.height = Math.floor(Math.random() * 999) + 1;
 				}
@@ -151,24 +162,24 @@ function fingerprintProtection() {
 				canvas_a.prototype.toDataURL = function() {
 					fakecanvas.title = 'toDataURL';
 					document.documentElement.appendChild(fakecanvas);
-					if (canvas == 'block') return false;
-					else if (canvas == 'blank') {
+					if (canvas === 'block') return false;
+					else if (canvas === 'blank') {
 						fakecanvas.width = this.width;
 						fakecanvas.height = this.height;
 						return origToDataURL.apply(fakecanvas, arguments);
-					} else if (canvas == 'random') {
+					} else if (canvas === 'random') {
 						return origToDataURL.apply(fakecanvas, arguments);
 					}
 				};
 				canvas_a.prototype.toBlob = function() {
 					fakecanvas.title = 'toBlob';
 					document.documentElement.appendChild(fakecanvas);
-					if (canvas == 'block') return false;
-					else if (canvas == 'blank') {
+					if (canvas === 'block') return false;
+					else if (canvas === 'blank') {
 						fakecanvas.width = this.width;
 						fakecanvas.height = this.height;
 						return origToBlob.apply(fakecanvas, arguments);
-					} else if (canvas == 'random') {
+					} else if (canvas === 'random') {
 						return origToBlob.apply(fakecanvas, arguments);
 					}
 				};
@@ -177,45 +188,45 @@ function fingerprintProtection() {
 				canvas_b.prototype.getImageData = function() {
 					fakecanvas.title = 'getImageData';
 					document.documentElement.appendChild(fakecanvas);
-					if (canvas == 'block') return false;
-					else if (canvas == 'blank') {
+					if (canvas === 'block') return false;
+					else if (canvas === 'blank') {
 						fakecanvas.width = this.width;
 						fakecanvas.height = this.height;
 						return origGetImageData.apply(fakecanvas.getContext('2d'), arguments);
-					} else if (canvas == 'random') {
+					} else if (canvas === 'random') {
 						return origGetImageData.apply(fakecanvas.getContext('2d'), [Math.floor(Math.random() * fakewidth) + 1, Math.floor(Math.random() * fakeheight) + 1, Math.floor(Math.random() * fakewidth) + 1, Math.floor(Math.random() * fakeheight) + 1]);
 					}
-				}
+				};
 				var origGetLineDash = canvas_b.prototype.getLineDash;
 				canvas_b.prototype.getLineDash = function() {
 					fakecanvas.title = 'getLineDash';
 					document.documentElement.appendChild(fakecanvas);
-					if (canvas == 'block') return false;
-					else if (canvas == 'blank') {
+					if (canvas === 'block') return false;
+					else if (canvas === 'blank') {
 						fakecanvas.width = this.width;
 						fakecanvas.height = this.height;
 						return origGetLineDash.apply(fakecanvas.getContext('2d'), [0, 0]);
-					} else if (canvas == 'random') {
+					} else if (canvas === 'random') {
 						return origGetLineDash.apply(fakecanvas.getContext('2d'), [Math.floor(Math.random() * fakewidth) + 1, Math.floor(Math.random() * fakeheight) + 1]);
 					}
-				}
+				};
 				var canvas_c = scope.WebGLRenderingContext;
 				var origReadPixels = canvas_c.prototype.readPixels;
 				canvas_c.prototype.readPixels = function() {
 					fakecanvas.title = 'readPixels';
 					document.documentElement.appendChild(fakecanvas);
-					if (canvas == 'block') return false;
-					else if (canvas == 'blank') {
+					if (canvas === 'block') return false;
+					else if (canvas === 'blank') {
 						fakecanvas.width = this.width;
 						fakecanvas.height = this.height;
 						return origReadPixels.apply(fakecanvas.getContext('webgl'), arguments);
-					} else if (canvas == 'random') {
+					} else if (canvas === 'random') {
 						return origReadPixels.apply(fakecanvas.getContext('webgl'), [Math.floor(Math.random() * fakewidth) + 1, Math.floor(Math.random() * fakeheight) + 1, Math.floor(Math.random() * fakewidth) + 1, Math.floor(Math.random() * fakeheight) + 1, arguments[4], arguments[5], arguments[6]]);
 					}
 				}
 			}
 			/* Audio Block */
-			if (audioblock == 'true') {
+			if (audioblock === true) {
 				var audioblock_triggerblock = scope.document.createElement('div');
 				audioblock_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_audio';
 				var audioblock_a = scope.AudioBuffer;
@@ -223,47 +234,47 @@ function fingerprintProtection() {
 					audioblock_triggerblock.title = 'copyFromChannel';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				audioblock_a.prototype.getChannelData = function() {
 					audioblock_triggerblock.title = 'getChannelData';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				var audioblock_b = scope.AnalyserNode;
 				audioblock_b.prototype.getFloatFrequencyData = function() {
 					audioblock_triggerblock.title = 'getFloatFrequencyData';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				audioblock_b.prototype.getByteFrequencyData = function() {
 					audioblock_triggerblock.title = 'getByteFrequencyData';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				audioblock_b.prototype.getFloatTimeDomainData = function() {
 					audioblock_triggerblock.title = 'getFloatTimeDomainData';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				audioblock_b.prototype.getByteTimeDomainData = function() {
 					audioblock_triggerblock.title = 'getByteTimeDomainData';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				var audioblock_c = scope;
 				audioblock_c.AudioContext = function() {
 					audioblock_triggerblock.title = 'AudioContext';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 				audioblock_c.webkitAudioContext = function() {
 					audioblock_triggerblock.title = 'webkitAudioContext';
 					document.documentElement.appendChild(audioblock_triggerblock);
 					return false;
-				}
+				};
 			}
 			/* Canvas Font */
-			if (canvasfont == 'true') {
+			if (canvasfont === true) {
 				var canvasfont_triggerblock = scope.document.createElement('div');
 				canvasfont_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_canvasfont';
 				var canvasfont_a = scope.CanvasRenderingContext2D;
@@ -274,7 +285,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* Battery */
-			if (battery == 'true') {
+			if (battery === true) {
 				var battery_triggerblock = scope.document.createElement('div');
 				battery_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_battery';
 				var battery_a = scope.navigator;
@@ -285,7 +296,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* WebGL */
-			if (webgl == 'true') {
+			if (webgl === true) {
 				var webgl_triggerblock = scope.document.createElement('div');
 				webgl_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_webgl';
 				var webgl_a = scope.HTMLCanvasElement;
@@ -300,7 +311,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* WebRTC */
-			if (webrtcdevice == 'true') {
+			if (webrtcdevice === true) {
 				var webrtc_triggerblock = scope.document.createElement('div');
 				webrtc_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_webrtc';
 				var webrtc_a = scope.MediaStreamTrack;
@@ -308,12 +319,12 @@ function fingerprintProtection() {
 					webrtc_triggerblock.title = 'getSources';
 					document.documentElement.appendChild(webrtc_triggerblock);
 					return false;
-				}
+				};
 				webrtc_a.getMediaDevices = function() {
 					webrtc_triggerblock.title = 'getMediaDevices';
 					document.documentElement.appendChild(webrtc_triggerblock);
 					return false;
-				}
+				};
 				var webrtc_b = scope.navigator.mediaDevices;
 				webrtc_b.enumerateDevices = function() {
 					webrtc_triggerblock.title = 'enumerateDevices';
@@ -322,7 +333,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* Gamepad */
-			if (gamepad == 'true') {
+			if (gamepad === true) {
 				var gamepad_triggerblock = scope.document.createElement('div');
 				gamepad_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_gamepad';
 				var gamepad_a = scope.navigator;
@@ -333,7 +344,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* WebVR */
-			if (webvr == 'true') {
+			if (webvr === true) {
 				var webvr_triggerblock = scope.document.createElement('div');
 				webvr_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_webvr';
 				var webvr_a = scope.navigator;
@@ -344,7 +355,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* Bluetooth */
-			if (bluetooth == 'true') {
+			if (bluetooth === true) {
 				if (scope.navigator.bluetooth) {
 					var bluetooth_triggerblock = scope.document.createElement('div');
 					bluetooth_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_bluetooth';
@@ -357,7 +368,7 @@ function fingerprintProtection() {
 				}
 			}
 			/* Client Rectangles */
-			if (clientrects == 'true') {
+			if (clientrects === true) {
 				var clientrects_triggerblock = scope.document.createElement('div');
 				clientrects_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_clientrects';
 				Element.prototype.getClientRects = function() {
@@ -367,19 +378,19 @@ function fingerprintProtection() {
 				}
 			}
 			/* Timezone */
-			if (timezone != 'false') {
+			if (timezone !== false) {
 				var timezone_triggerblock = scope.document.createElement('div');
 				timezone_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_timezone';
 				var timezone_a = scope.Date;
 				timezone_a.prototype.getTimezoneOffset = function() {
 					timezone_triggerblock.title = 'getTimezoneOffset';
 					document.documentElement.appendChild(timezone_triggerblock);
-					if (timezone == 'random') return ['720','660','600','570','540','480','420','360','300','240','210','180','120','60','0','-60','-120','-180','-210','-240','-270','-300','-330','-345','-360','-390','-420','-480','-510','-525','-540','-570','-600','-630','-660','-720','-765','-780','-840'][Math.floor(Math.random() * 39)];
+					if (timezone === 'random') return ['720','660','600','570','540','480','420','360','300','240','210','180','120','60','0','-60','-120','-180','-210','-240','-270','-300','-330','-345','-360','-390','-420','-480','-510','-525','-540','-570','-600','-630','-660','-720','-765','-780','-840'][Math.floor(Math.random() * 39)];
 					return timezone;
 				}
 			}
 			/* Clipboard */
-			if (clipboard == 'true') {
+			if (clipboard === true) {
 				var clipboard_triggerblock = scope.document.createElement('div');
 				clipboard_triggerblock.className = 'scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_clipboard';
 				var clipboard_a = document;
@@ -387,7 +398,7 @@ function fingerprintProtection() {
 				clipboard_a.execCommand = function() {
 					clipboard_triggerblock.title = 'execCommand';
 					document.documentElement.appendChild(clipboard_triggerblock);
-					if (arguments[0] == 'cut' || arguments[0] == 'copy') return false;
+					if (arguments[0] === 'cut' || arguments[0] === 'copy') return false;
 					return origExecCommand.apply(this, arguments);
 				};
 			}
@@ -398,7 +409,7 @@ function fingerprintProtection() {
 			contentWindow: {
 				get: function() {
 					var frame = iwin.apply(this);
-					if (this.src && this.src.indexOf('//') != -1 && location.host != this.src.split('/')[2]) return frame;
+					if (this.src && this.src.indexOf('//') !== -1 && location.host !== this.src.split('/')[2]) return frame;
 					try { frame.HTMLCanvasElement } catch (err) { /* do nothing*/ }
 					processFunctions(frame);
 					return frame;
@@ -406,7 +417,7 @@ function fingerprintProtection() {
 			},
 			contentDocument: {
 				get: function() {
-					if (this.src && this.src.indexOf('//') != -1 && location.host != this.src.split('/')[2]) return idoc.apply(this);
+					if (this.src && this.src.indexOf('//') !== -1 && location.host !== this.src.split('/')[2]) return idoc.apply(this);
 					var frame = iwin.apply(this);
 					try { frame.HTMLCanvasElement } catch (err) { /* do nothing*/ }
 					processFunctions(frame);
@@ -414,29 +425,29 @@ function fingerprintProtection() {
 				}
 			}
 		});
-	}, "'"+SETTINGS['CANVAS']+"','"+SETTINGS['CANVASFONT']+"','"+SETTINGS['AUDIOBLOCK']+"','"+SETTINGS['BATTERY']+"','"+SETTINGS['WEBGL']+"','"+SETTINGS['WEBRTCDEVICE']+"','"+SETTINGS['GAMEPAD']+"','"+SETTINGS['WEBVR']+"','"+SETTINGS['BLUETOOTH']+"','"+SETTINGS['TIMEZONE']+"','"+SETTINGS['CLIENTRECTS']+"','"+SETTINGS['CLIPBOARD']+"'");
+	}, "'"+SETTINGS.CANVAS+"','"+SETTINGS.CANVASFONT+"','"+SETTINGS.AUDIOBLOCK+"','"+SETTINGS.BATTERY+"','"+SETTINGS.WEBGL+"','"+SETTINGS.WEBRTCDEVICE+"','"+SETTINGS.GAMEPAD+"','"+SETTINGS.WEBVR+"','"+SETTINGS.BLUETOOTH+"','"+SETTINGS.TIMEZONE+"','"+SETTINGS.CLIENTRECTS+"','"+SETTINGS.CLIPBOARD+"'");
 }
 function clipboardProtect(el) {
     var arr = ['copy', 'cut', 'paste', 'selectstart', 'contextmenu', 'mousedown', 'mouseup'];
     for (var i = 0; i < arr.length; i++) {
         if (el['on' + arr[i]]) el['on' + arr[i]] = null;
         el.addEventListener(arr[i], function(e){ if (!clipboard) { clipboard = true; chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+e.type+"())", node: 'Clipboard Interference'}); } e.stopPropagation(); }, true);
-    };
+    }
 }
 function loaded() {
 	ScriptSafe();
 	new MutationObserver(ScriptSafe).observe(document.querySelector("body"), { childList: true, subtree : true, attributes: false, characterData : false });
 }
 function ScriptSafe() {
-	if (SETTINGS['LINKTARGET'] != 'off' || SETTINGS['DATAURL'] == 'true' || SETTINGS['REFERRER'] == 'alldomains' || (SETTINGS['REFERRER'] == 'true' && (SETTINGS['DOMAINSTATUS'] != '0' || SETTINGS['REFERRERSPOOFDENYWHITELISTED'] == 'true'))) {
+	if (SETTINGS.LINKTARGET !== 'off' || SETTINGS.DATAURL === true || SETTINGS.REFERRER === 'alldomains' || (SETTINGS.REFERRER === true && (SETTINGS.DOMAINSTATUS !== 0 || SETTINGS.REFERRERSPOOFDENYWHITELISTED === true))) {
 		$("a[data-ss"+timestamp+"!='1']").each(function() {
 			var elSrc = getElSrc(this);
 			var attr = {};		
-			if ((SETTINGS['REFERRER'] == 'alldomains' || (SETTINGS['REFERRER'] == 'true' && (SETTINGS['DOMAINSTATUS'] != '0' || SETTINGS['REFERRERSPOOFDENYWHITELISTED'] == 'true'))) && thirdParty(elSrc)) attr['rel'] = 'noreferrer';
-			if (SETTINGS['LINKTARGET'] != 'off') {
-				if ($(this).attr('target') != linktrgt) attr['target'] = linktrgt;
+			if ((SETTINGS.REFERRER === 'alldomains' || (SETTINGS.REFERRER === true && (SETTINGS.DOMAINSTATUS !== 0 || SETTINGS.REFERRERSPOOFDENYWHITELISTED === true))) && thirdParty(elSrc)) attr['rel'] = 'noreferrer';
+			if (SETTINGS.LINKTARGET !== 'off') {
+				if ($(this).attr('target') !== linktrgt) attr['target'] = linktrgt;
 			}
-			if (SETTINGS['DATAURL'] == 'true' && elSrc.match(/^\s*data:text\//i)) {
+			if (SETTINGS.DATAURL === true && elSrc.match(/^\s*data:text\//i)) {
 				chrome.extension.sendRequest({reqtype: "update-blocked", src: $(this).attr('href'), node: 'Data URL'});
 				attr['target'] = '';
 				attr['href'] = 'data:text/html,<h1>This data:text/html link has been sanitized by ScriptSafe.</h1><p>Original link:<br><strong>'+$(this).attr('href').replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/^\s*data:text/i, "data-SCRIPTSAFE:text")+'</strong></p><p>If you would like to still load it (not recommended), copy and paste the above string into your address bar and remove "-SCRIPTSAFE" which is inserted as a safeguard.</p><p><a href="javascript:history.go(-1);">Go Back</a></p>';
@@ -445,58 +456,58 @@ function ScriptSafe() {
 			$(this).attr(attr);
 		});
 	}
-	if (SETTINGS['CANVAS'] != 'false') {
+	if (SETTINGS.CANVAS !== false) {
 		$("canvas.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_canvas").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Canvas Fingerprint'}); $(this).remove(); });
 	}
-	if (SETTINGS['CLIPBOARD'] == 'true') {
+	if (SETTINGS.CLIPBOARD === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_clipboard").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Clipboard Interference'}); $(this).remove(); });
 	}
-	if (SETTINGS['CANVASFONT'] == 'true') {
+	if (SETTINGS.CANVASFONT === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_canvasfont").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Canvas Font Access'}); $(this).remove(); });
 	}
-	if (SETTINGS['AUDIOBLOCK'] == 'true') {
+	if (SETTINGS.AUDIOBLOCK === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_audio").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Audio Fingerprint'}); $(this).remove(); });
 	}
-	if (SETTINGS['WEBGL'] == 'true') {
+	if (SETTINGS.WEBGL === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_webgl").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'WebGL Fingerprint'}); $(this).remove(); });
 	}
-	if (SETTINGS['BATTERY'] == 'true') {
+	if (SETTINGS.BATTERY === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_battery").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Battery Fingerprint'}); $(this).remove(); });
 	}
-	if (SETTINGS['WEBRTCDEVICE'] == 'true') {
+	if (SETTINGS.WEBRTCDEVICE === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_webrtc").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Device Enumeration'}); $(this).remove(); });
 	}
-	if (SETTINGS['GAMEPAD'] == 'true') {
+	if (SETTINGS.GAMEPAD === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_gamepad").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Gamepad Enumeration'}); $(this).remove(); });
 	}
-	if (SETTINGS['WEBVR'] == 'true') {
+	if (SETTINGS.WEBVR === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_webvr").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'WebVR Enumeration'}); $(this).remove(); });
 	}
-	if (SETTINGS['BLUETOOTH'] == 'true') {
+	if (SETTINGS.BLUETOOTH === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_bluetooth").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Bluetooth Enumeration'}); $(this).remove(); });
 	}
-	if (SETTINGS['CLIENTRECTS'] == 'true') {
+	if (SETTINGS.CLIENTRECTS === true) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_clientrects").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Client Rectangles'}); $(this).remove(); });
 	}
-	if (SETTINGS['TIMEZONE'] != 'false') {
+	if (SETTINGS.TIMEZONE !== false) {
 		$("div.scriptsafe_oiigbmnaadbkfbmpbfijlflahbdbdgdf_timezone").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: window.location.href+" ("+$(this).attr('title')+"())", node: 'Spoofed Timezone'}); $(this).remove(); });
 	}
-	if (SETTINGS['NOSCRIPT'] == 'true' && SETTINGS['LISTSTATUS'] == 'true') {
+	if (SETTINGS.NOSCRIPT === true && SETTINGS.LISTSTATUS === true) {
 		$("noscript").each(function() { chrome.extension.sendRequest({reqtype: "update-blocked", src: $(this).html(), node: 'NOSCRIPT'}); $(this).remove(); });
 	}
-	if (SETTINGS['APPLET'] == 'true') $("applet[data-ss"+timestamp+"!='1']").each(function() { var elSrc = $(this).attr('code'); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'APPLET'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'APPLET'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['VIDEO'] == 'true') $("video[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'VIDEO'}); removeMedia($(this)); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'VIDEO'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['AUDIO'] == 'true') $("audio[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'AUDIO'}); removeMedia($(this)); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'AUDIO'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['IFRAME'] == 'true') $("iframe[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'FRAME'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'FRAME'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['OBJECT'] == 'true') $("object[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'OBJECT'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'OBJECT'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['EMBED'] == 'true') $("embed[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'EMBED'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'EMBED'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['IMAGE'] == 'true') $("picture[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'IMAGE'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'IMAGE'}); $(this).attr("data-ss"+timestamp,'1'); } } });
-	if (SETTINGS['IMAGE'] == 'true') $("img[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'IMAGE'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'IMAGE'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.APPLET === true) $("applet[data-ss"+timestamp+"!='1']").each(function() { var elSrc = $(this).attr('code'); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'APPLET'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'APPLET'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.VIDEO === true) $("video[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'VIDEO'}); removeMedia($(this)); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'VIDEO'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.AUDIO === true) $("audio[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'AUDIO'}); removeMedia($(this)); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'AUDIO'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.IFRAME === true) $("iframe[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'FRAME'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'FRAME'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.OBJECT === true) $("object[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'OBJECT'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'OBJECT'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.EMBED === true) $("embed[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'EMBED'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'EMBED'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.IMAGE === true) $("picture[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'IMAGE'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'IMAGE'}); $(this).attr("data-ss"+timestamp,'1'); } } });
+	if (SETTINGS.IMAGE === true) $("img[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'IMAGE'}); $(this).remove(); } else { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: 'IMAGE'}); $(this).attr("data-ss"+timestamp,'1'); } } });
 	/* Fallback Inline Script Handling */
-	if (SETTINGS['SCRIPT'] == 'true' && SETTINGS['EXPERIMENTAL'] == '0') {
+	if (SETTINGS.SCRIPT === true && SETTINGS.EXPERIMENTAL === 0) {
 		clearUnloads();
 		$("script[data-ss"+timestamp+"!='1']").each(function() { var elSrc = getElSrc(this); if (elSrc) { elSrc = relativeToAbsoluteUrl(elSrc); if (postLoadCheck(elSrc.toLowerCase())) { chrome.extension.sendRequest({reqtype: "update-blocked", src: elSrc, node: 'SCRIPT'}); $(this).remove(); } else { if (elSrc.substr(0,4) == 'http') { chrome.extension.sendRequest({reqtype: "update-allowed", src: elSrc, node: "SCRIPT"}); $(this).attr("data-ss"+timestamp,'1'); } } } });
-		if ((SETTINGS['PRESERVESAMEDOMAIN'] == 'false' || (SETTINGS['PRESERVESAMEDOMAIN'] != 'false' && SETTINGS['DOMAINSTATUS'] == '1'))) {
+		if ((SETTINGS.PRESERVESAMEDOMAIN === false || (SETTINGS.PRESERVESAMEDOMAIN !== false && SETTINGS.DOMAINSTATUS === 1))) {
 			$("a[href^='javascript']").attr("href","javascript:;");
 			$("[onClick]").removeAttr("onClick");
 			$("[onAbort]").removeAttr("onAbort");
@@ -525,52 +536,63 @@ function ScriptSafe() {
 	}
 }
 function postLoadCheck(elSrc) {
-	if (elSrc.substring(0,4) != 'http') return false;
+	if (elSrc.substring(0,4) !== 'http') return false;
 	var domainCheckStatus;
 	var thirdPartyCheck;
 	var elementStatusCheck;
-	var baddiesCheck = baddies(elSrc, SETTINGS['ANNOYANCESMODE'], SETTINGS['ANTISOCIAL'], 2);
-	if (SETTINGS['DOMAINSTATUS'] == '1' || (SETTINGS['DOMAINSTATUS'] == '-1' && SETTINGS['MODE'] == 'block' && SETTINGS['PARANOIA'] == 'true' && SETTINGS['PRESERVESAMEDOMAIN'] == 'false')) {
+	var baddiesCheck = baddies(elSrc, SETTINGS.ANNOYANCESMODE, SETTINGS.ANTISOCIAL, 2);
+	if (SETTINGS.DOMAINSTATUS === 1 || (SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true && SETTINGS.PRESERVESAMEDOMAIN === false)) {
 		elementStatusCheck = true;
 		thirdPartyCheck = true;
 	} else {
 		domainCheckStatus = domainCheck(elSrc, 1);
 		var elementDomain = extractDomainFromURL(elSrc);
-		if ((domainCheckStatus == '0' && !(SETTINGS['DOMAINSTATUS'] == '-1' && SETTINGS['MODE'] == 'block' && SETTINGS['PARANOIA'] == 'true')) || (SETTINGS['preservesamedomain'] == 'strict' && elementDomain == window.location.hostname)) thirdPartyCheck = false;
-		else if (SETTINGS['preservesamedomain'] == 'strict' && elementDomain != window.location.hostname) thirdPartyCheck = true;
-		else thirdPartyCheck = thirdParty(elSrc);
-		if ((SETTINGS['DOMAINSTATUS'] == '-1' && SETTINGS['MODE'] == 'block' && SETTINGS['PARANOIA'] == 'true') || (domainCheckStatus != '0' && (domainCheckStatus == '1' || (domainCheckStatus == '-1' && SETTINGS['MODE'] == 'block'))) || ((SETTINGS['ANNOYANCES'] == 'true' && (SETTINGS['ANNOYANCESMODE'] == 'strict' || (SETTINGS['ANNOYANCESMODE'] == 'relaxed' && domainCheckStatus != '0'))) && baddiesCheck == '1') || (SETTINGS['ANTISOCIAL'] == 'true' && baddiesCheck == '2'))
-			elementStatusCheck = true;
-		else elementStatusCheck = false;
+		if ((domainCheckStatus === 0 && !(SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true)) || (SETTINGS['preservesamedomain'] === 'strict' && elementDomain === window.location.hostname))
+		    thirdPartyCheck = false;
+		else if (SETTINGS.PRESERVESAMEDOMAIN === 'strict' && elementDomain !== window.location.hostname)
+		    thirdPartyCheck = true;
+		else
+		    thirdPartyCheck = thirdParty(elSrc);
+
+		var settingDomainCheckStatus = SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true;
+        var domainStatus = domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && SETTINGS.MODE === block));
+        var annoyanceStatus = (SETTINGS.ANNOYANCES === true && (SETTINGS.ANNOYANCESMODE === 'strict' || (SETTINGS.ANNOYANCESMODE === 'relaxed' && domainCheckStatus !== 0))) && baddiesCheck === 1;
+		var antisocialStatus = SETTINGS.ANTISOCIAL === true && baddiesCheck === 2;
+        elementStatusCheck = settingDomainCheckStatus || domainStatus || annoyanceStatus || antisocialStatus;
 	}
-	if (elementStatusCheck && ((SETTINGS['PRESERVESAMEDOMAIN'] != 'false' && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck)) || SETTINGS['PRESERVESAMEDOMAIN'] == 'false'))
-		return true;
-	return false;
+	return (elementStatusCheck && ((SETTINGS.PRESERVESAMEDOMAIN !== false && (thirdPartyCheck || domainCheckStatus === 1 || baddiesCheck)) || SETTINGS.PRESERVESAMEDOMAIN === false));
 }
+/**
+ * @param {string} domain
+ * @param {number} req
+ * @returns {number}
+ */
 function domainCheck(domain, req) {
-	if (!domain) return '-1';
+	if (!domain) return -1;
 	if (req === undefined) {
-		var baddiesCheck = baddies(domain, SETTINGS['ANNOYANCESMODE'], SETTINGS['ANTISOCIAL']);
-		if ((SETTINGS['ANNOYANCES'] == 'true' && SETTINGS['ANNOYANCESMODE'] == 'strict' && baddiesCheck == '1') || (SETTINGS['ANTISOCIAL'] == 'true' && baddiesCheck == '2')) return '1';
+		var baddiesCheck = baddies(domain, SETTINGS.ANNOYANCESMODE, SETTINGS.ANTISOCIAL);
+		if ((SETTINGS.ANNOYANCES === true && SETTINGS.ANNOYANCESMODE === 'strict' && baddiesCheck === 1) || (SETTINGS.ANTISOCIAL === true && baddiesCheck === 2))
+		    return 1;
 	}
 	var domainname = extractDomainFromURL(domain);
-	if (req != '2') {
-		if (SETTINGS['MODE'] == 'block' && in_array(domainname, SETTINGS['WHITELISTSESSION'])) return '0';
-		if (SETTINGS['MODE'] == 'allow' && in_array(domainname, SETTINGS['BLACKLISTSESSION'])) return '1';
+	if (req !== 2) {
+		if (SETTINGS.MODE === 'block' && in_array(domainname, SETTINGS.WHITELISTSESSION)) return 0;
+		if (SETTINGS.MODE === 'allow' && in_array(domainname, SETTINGS.BLACKLISTSESSION)) return 1;
 	}
-	if (in_array(domainname, SETTINGS['WHITELIST'])) return '0';
-	if (in_array(domainname, SETTINGS['BLACKLIST'])) return '1';
+	if (in_array(domainname, SETTINGS.WHITELIST)) return 0;
+	if (in_array(domainname, SETTINGS.BLACKLIST)) return 1;
 	if (req === undefined) {
-		if (SETTINGS['ANNOYANCES'] == 'true' && SETTINGS['ANNOYANCESMODE'] == 'relaxed' && baddiesCheck) return '1';
+		if (SETTINGS.ANNOYANCES === true && SETTINGS.ANNOYANCESMODE === 'relaxed' && baddiesCheck)
+		    return 1;
 	}
-	return '-1';
+	return -1;
 }
 function relativeToAbsoluteUrl(url) { // credit: NotScripts
-	if (!url || url.indexOf('://') != -1)
+	if (!url || url.indexOf('://') !== -1)
 		return url;
-	if (url[0] == '/' && url[1] == '/')
+	if (url[0] === '/' && url[1] === '/')
 		return document.location.protocol + url;
-	if (url[0] == '/')
+	if (url[0] === '/')
 		return document.location.protocol + "//" + window.location.hostname + url;
 	var base = document.baseURI.match(/.+\//);
 	if (!base)
@@ -584,17 +606,18 @@ function removeMedia($el) {
 	$el.load();
 	//$el.hide();
 	$el.remove().length = 0;
-};
+}
 function getElSrc(el) {
+    var plist, i;
 	var reStartWProtocol = /^[^\.\/:]+:\/\//i; // credit: NotScripts
 	switch (el.nodeName.toUpperCase()) {
-		case 'PICTURE':
-			var plist = el.getElementsByTagName('source');
-			for (var i=0; i < plist.length; i++) {
+        case 'PICTURE':
+            plist = el.getElementsByTagName('source');
+            for (i=0; i < plist.length; i++) {
 				if (plist[i].srcset) return plist[i].srcset;
 			}
 			plist = el.getElementsByTagName('img');
-			for (var i=0; i < plist.length; i++) {
+			for (i=0; i < plist.length; i++) {
 				if (plist[i].src) return plist[i].src;
 			}
 			return window.location.href;
@@ -603,8 +626,8 @@ function getElSrc(el) {
 			if (el.src)	{
 				if (reStartWProtocol.test(el.src)) return el.src;
 			}
-			var plist = el.getElementsByTagName('source');
-			for (var i=0; i < plist.length; i++) {
+			plist = el.getElementsByTagName('source');
+			for (i=0; i < plist.length; i++) {
 				if (plist[i].src) return plist[i].src;
 			}
 			return window.location.href;
@@ -613,8 +636,8 @@ function getElSrc(el) {
 			if (el.src)	{
 				if (reStartWProtocol.test(el.src)) return el.src;
 			}
-			var plist = el.getElementsByTagName('source');
-			for (var i=0; i < plist.length; i++) {
+			plist = el.getElementsByTagName('source');
+			for (i=0; i < plist.length; i++) {
 				if (plist[i].src) return plist[i].src;
 			}
 			return window.location.href;
@@ -625,8 +648,8 @@ function getElSrc(el) {
 				if (reStartWProtocol.test(el.data)) return el.data;
 				else return codeBase;				
 			}
-			var plist = el.getElementsByTagName('param');
-			for (var i=0; i < plist.length; i++) {
+			plist = el.getElementsByTagName('param');
+			for (i=0; i < plist.length; i++) {
 				var paramName = plist[i].name.toLowerCase();
 				if (paramName === 'movie' || paramName === 'src' || paramName === 'codebase' || paramName === 'data')
 					return plist[i].value;
@@ -661,7 +684,7 @@ function getElSrc(el) {
 	}
 }
 function randomDelay() {
-	var zzz = (Date.now() + (Math.floor(Math.random() * SETTINGS['KEYDELTA'])));
+	var zzz = (Date.now() + (Math.floor(Math.random() * SETTINGS.KEYDELTA)));
 	while (Date.now() < zzz) {};
 }
 function injectAnon(f, val) {
@@ -673,10 +696,11 @@ function injectAnon(f, val) {
 }
 /* Fallback Inline Script Handling (if Chrome doesn't support chrome.webRequest API) / */
 function mitigate() { // credit: NotScripts
+    var jsType, i;
 	injectAnon(function(){
-		for (var i in window) {
+		for (i in window) {
 			try {
-				var jsType = typeof window[i];
+				jsType = typeof window[i];
 				switch (jsType.toUpperCase()) {					
 					case "FUNCTION": 
 						if (window[i] !== window.location) {
@@ -693,9 +717,9 @@ function mitigate() { // credit: NotScripts
 				}			
 			} catch(err) {}		
 		}
-		for (var i in document) {
+		for (i in document) {
 			try {
-				var jsType = typeof document[i];
+				jsType = typeof document[i];
 				switch (jsType.toUpperCase()) {					
 					case "FUNCTION":
 						document[i] = function(){return "";};
@@ -746,10 +770,11 @@ function block(event) {
 	var elSrc = getElSrc(el);
 	if (!elSrc) return;
 	var elType = el.nodeName.toUpperCase();
-	if (!(elType == "A" || elType == "IFRAME" || elType == "FRAME" || (elType == "SCRIPT" && SETTINGS['EXPERIMENTAL'] == '0') || elType == "EMBED" || elType == "OBJECT" || elType == "IMG")) return;
+	if (!(elType === "A" || elType === "IFRAME" || elType === "FRAME" || (elType === "SCRIPT" && SETTINGS.EXPERIMENTAL === 0) || elType === "EMBED" || elType === "OBJECT" || elType === "IMG"))
+	    return;
 	elSrc = elSrc.toLowerCase();
 	var absoluteUrl = relativeToAbsoluteUrl(elSrc);
-	if (absoluteUrl.substr(0,4) != 'http') return;
+	if (absoluteUrl.substr(0,4) !== 'http') return;
 	var thirdPartyCheck;
 	var elementStatusCheck;
 	var domainCheckStatus;
@@ -757,67 +782,72 @@ function block(event) {
 	var elWidth = $el.attr('width');
 	var elHeight = $el.attr('height');
 	var elStyle = $el.attr('style');
-	var baddiesCheck = baddies(absoluteUrl, SETTINGS['ANNOYANCESMODE'], SETTINGS['ANTISOCIAL']);
-	if (SETTINGS['DOMAINSTATUS'] == '1' || (SETTINGS['DOMAINSTATUS'] == '-1' && SETTINGS['MODE'] == 'block' && SETTINGS['PARANOIA'] == 'true' && SETTINGS['PRESERVESAMEDOMAIN'] == 'false')) {
+	var baddiesCheck = baddies(absoluteUrl, SETTINGS.ANNOYANCESMODE, SETTINGS.ANTISOCIAL);
+	if (SETTINGS.DOMAINSTATUS === 1 || (SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true && SETTINGS.PRESERVESAMEDOMAIN === false)) {
 		elementStatusCheck = true;
 		thirdPartyCheck = true;
 		domainCheckStatus = '1';
 	} else {
 		domainCheckStatus = domainCheck(absoluteUrl, 1);
 		var elementDomain = extractDomainFromURL(absoluteUrl);
-		if ((domainCheckStatus == '0' && !(SETTINGS['DOMAINSTATUS'] == '-1' && SETTINGS['MODE'] == 'block' && SETTINGS['PARANOIA'] == 'true')) || (SETTINGS['PRESERVESAMEDOMAIN'] == 'strict' && elementDomain == window.location.hostname)) thirdPartyCheck = false;
-		else if (SETTINGS['PRESERVESAMEDOMAIN'] == 'strict' && elementDomain != window.location.hostname) thirdPartyCheck = true;
+		if ((domainCheckStatus === 0 && !(SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true))
+                || (SETTINGS.PRESERVESAMEDOMAIN === 'strict' && elementDomain === window.location.hostname))
+		    thirdPartyCheck = false;
+		else if (SETTINGS.PRESERVESAMEDOMAIN === 'strict' && elementDomain !== window.location.hostname)
+		    thirdPartyCheck = true;
 		else thirdPartyCheck = thirdParty(absoluteUrl);
-		if ((SETTINGS['DOMAINSTATUS'] == '-1' && SETTINGS['MODE'] == 'block' && SETTINGS['PARANOIA'] == 'true') || (domainCheckStatus != '0' && (domainCheckStatus == '1' || (domainCheckStatus == '-1' && SETTINGS['MODE'] == 'block'))) || ((SETTINGS['ANNOYANCES'] == 'true' && (SETTINGS['ANNOYANCESMODE'] == 'strict' || (SETTINGS['ANNOYANCESMODE'] == 'relaxed' && domainCheckStatus != '0'))) && baddiesCheck == '1') || (SETTINGS['ANTISOCIAL'] == 'true' && baddiesCheck == '2'))
-			elementStatusCheck = true;
-		else elementStatusCheck = false;
-	}
+        var settingDomainCheckStatus = SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true;
+        var domainStatus = domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && SETTINGS.MODE === block));
+        var annoyanceStatus = (SETTINGS.ANNOYANCES === true && (SETTINGS.ANNOYANCESMODE === 'strict' || (SETTINGS.ANNOYANCESMODE === 'relaxed' && domainCheckStatus !== 0))) && baddiesCheck === 1;
+        var antisocialStatus = SETTINGS.ANTISOCIAL === true && baddiesCheck === 2;
+        elementStatusCheck = settingDomainCheckStatus || domainStatus || annoyanceStatus || antisocialStatus;
+    }
 	if (elementStatusCheck && (
 		(
 			(
 				(
-					(elType == "IFRAME" && SETTINGS['IFRAME'] == 'true')
-					|| (elType == "FRAME" && SETTINGS['FRAME'] == 'true')
-					|| (elType == "EMBED" && SETTINGS['EMBED'] == 'true')
-					|| (elType == "OBJECT" && SETTINGS['OBJECT'] == 'true')
-					|| (elType == "SCRIPT" && SETTINGS['SCRIPT'] == 'true' && SETTINGS['EXPERIMENTAL'] == '0')
-					|| (elType == "VIDEO" && SETTINGS['VIDEO'] == 'true')
-					|| (elType == "AUDIO" && SETTINGS['AUDIO'] == 'true')
-					|| (elType == "IMG" && SETTINGS['IMAGE'] == 'true')
-					|| (elType == "A" && (SETTINGS['REFERRER'] == 'alldomains' || (SETTINGS['REFERRER'] == 'true' && (SETTINGS['DOMAINSTATUS'] != '0' || SETTINGS['REFERRERSPOOFDENYWHITELISTED'] == 'true'))))
+					(elType === "IFRAME" && SETTINGS.IFRAME === true)
+					|| (elType === "FRAME" && SETTINGS.FRAME === true)
+					|| (elType === "EMBED" && SETTINGS.EMBED === true)
+					|| (elType === "OBJECT" && SETTINGS.OBJECT === true)
+					|| (elType === "SCRIPT" && SETTINGS.SCRIPT === true && SETTINGS.EXPERIMENTAL === 0)
+					|| (elType === "VIDEO" && SETTINGS.VIDEO === true)
+					|| (elType === "AUDIO" && SETTINGS.AUDIO === true)
+					|| (elType === "IMG" && SETTINGS.IMAGE === true)
+					|| (elType === "A" && (SETTINGS.REFERRER === 'alldomains' || (SETTINGS.REFERRER === true && (SETTINGS.DOMAINSTATUS !== 0 || SETTINGS.REFERRERSPOOFDENYWHITELISTED === true))))
 				)
 				&& (
-					(SETTINGS['PRESERVESAMEDOMAIN'] != 'false' && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck))
-					|| SETTINGS['PRESERVESAMEDOMAIN'] == 'false'
+					(SETTINGS.PRESERVESAMEDOMAIN !== false && (thirdPartyCheck || domainCheckStatus === 1 || baddiesCheck))
+					|| SETTINGS.PRESERVESAMEDOMAIN === false
 				)
 				
 			)
 		)
 		|| (
-			SETTINGS['WEBBUGS'] == 'true'
-			&& (elType == "IMG" || elType == "IFRAME" ||  elType == "FRAME" || elType == "EMBED" || elType == "OBJECT")
-			&& (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck)
+			SETTINGS.WEBBUGS === true
+			&& (elType === "IMG" || elType === "IFRAME" ||  elType === "FRAME" || elType === "EMBED" || elType === "OBJECT")
+			&& (thirdPartyCheck || domainCheckStatus === 1 || baddiesCheck)
 			&& (
 				(typeof elWidth !== 'undefined' && elWidth <= 5 && typeof elHeight !== 'undefined' && elHeight <= 5)
 				|| (typeof elStyle !== 'undefined' && elStyle.match(/(.*?;\s*|^\s*?)(height|width)\s*?:\s*?[0-5]\D.*?;\s*(height|width)\s*?:\s*?[0-5]\D/i))
 			)
 		)
 		|| (
-			(SETTINGS['REFERRER'] == 'alldomains' || (SETTINGS['REFERRER'] == 'true' && (SETTINGS['DOMAINSTATUS'] != '0' || SETTINGS['REFERRERSPOOFDENYWHITELISTED'] == 'true'))) && elType == "A" && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck)
+			(SETTINGS.REFERRER === 'alldomains' || (SETTINGS.REFERRER === true && (SETTINGS.DOMAINSTATUS !== 0 || SETTINGS.REFERRERSPOOFDENYWHITELISTED === true))) && elType === "A" && (thirdPartyCheck || domainCheckStatus === '1' || baddiesCheck)
 	))) {
-			if ((SETTINGS['REFERRER'] == 'alldomains' || (SETTINGS['REFERRER'] == 'true' && (SETTINGS['DOMAINSTATUS'] != '0' || SETTINGS['REFERRERSPOOFDENYWHITELISTED'] == 'true'))) && elType == "A" && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck)) {
+			if ((SETTINGS.REFERRER === 'alldomains' || (SETTINGS.REFERRER === true && (SETTINGS.DOMAINSTATUS !== 0 || SETTINGS.REFERRERSPOOFDENYWHITELISTED === true))) && elType === "A" && (thirdPartyCheck || domainCheckStatus === '1' || baddiesCheck)) {
 				$(el).attr("rel","noreferrer");
 			} else {
 				event.preventDefault();
-				if (SETTINGS['WEBBUGS'] == 'true' && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck) && (elType == "IFRAME" || elType == "FRAME" || elType == "EMBED" || elType == "OBJECT" || elType == "IMG") && ((typeof elWidth !== 'undefined' && elWidth <= 5 && typeof elHeight !== 'undefined' && elHeight <= 5) || (typeof elStyle !== 'undefined' && elStyle.match(/(.*?;\s*|^\s*?)(height|width)\s*?:\s*?[0-5]\D.*?;\s*(height|width)\s*?:\s*?[0-5]\D/i)))) {
+				if (SETTINGS.WEBBUGS === true && (thirdPartyCheck || domainCheckStatus === '1' || baddiesCheck) && (elType === "IFRAME" || elType === "FRAME" || elType === "EMBED" || elType === "OBJECT" || elType === "IMG") && ((typeof elWidth !== 'undefined' && elWidth <= 5 && typeof elHeight !== 'undefined' && elHeight <= 5) || (typeof elStyle !== 'undefined' && elStyle.match(/(.*?;\s*|^\s*?)(height|width)\s*?:\s*?[0-5]\D.*?;\s*(height|width)\s*?:\s*?[0-5]\D/i)))) {
 					elType = "WEBBUG";
 				}
 				chrome.extension.sendRequest({reqtype: "update-blocked", src: absoluteUrl, node: elType});
-				if (elType == 'VIDEO' || elType == 'AUDIO') removeMedia($el);
+				if (elType === 'VIDEO' || elType === 'AUDIO') removeMedia($el);
 				else $(el).remove();
 			}
 		} else {
-			if (SETTINGS['EXPERIMENTAL'] == '0' && (elType == "IFRAME" || elType == "FRAME" || elType == "EMBED" || elType == "OBJECT" || elType == "SCRIPT")) {
+			if (SETTINGS.EXPERIMENTAL === 0 && (elType === "IFRAME" || elType === "FRAME" || elType === "EMBED" || elType === "OBJECT" || elType === "SCRIPT")) {
 				chrome.extension.sendRequest({reqtype: "update-allowed", src: absoluteUrl, node: elType});
 			}
 		}

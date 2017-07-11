@@ -5,6 +5,7 @@
 'use strict';
 var version = '1.0.9.2';
 var requestTypes, synctimer, blackList, whiteList, distrustList, trustList, sessionBlackList, sessionWhiteList, locale;
+var domainMappedBlackList, domainMappedWhiteList;
 var langs = {
 	'en_US': 'English (US)',
 	'en_GB': 'English (UK)',
@@ -23,33 +24,38 @@ var langs = {
 	'ru': 'Russian',
 	'es': 'Spanish',
 	'sv': 'Swedish'
-}
+};
 var fpTypes = ['fpCanvas', 'fpCanvasFont', 'fpAudio', 'fpWebGL', 'fpBattery', 'fpDevice', 'fpGamepad', 'fpWebVR', 'fpBluetooth', 'fpClientRectangles', 'fpClipboard'];
 var fpLists = [];
 var fpListsSession = [];
 var popup = [];
+/** @type {boolean} */
 var changed = false;
 var ITEMS = {};
+/** @type {number} */
 var experimental = 0;
+/** @type {boolean} */
 var storageapi = false;
+/** @type {boolean} */
 var webrtcsupport = false;
+/** @type {boolean} */
 var updated = false;
 function refreshRequestTypes() {
 	requestTypes = ['main_frame'];
-	if (localStorage['iframe'] == 'true' || localStorage['frame'] == 'true')
+	if (localStorage['iframe'] === true || localStorage['frame'] === true)
 		requestTypes.push('sub_frame');
-	if (localStorage['object'] == 'true' || localStorage['embed'] == 'true')
+	if (localStorage['object'] === true || localStorage['embed'] === true)
 		requestTypes.push('object');
-	if (localStorage['script'] == 'true')
+	if (localStorage['script'] === true)
 		requestTypes.push('script');
-	if (localStorage['image'] == 'true' || localStorage['webbugs'] == 'true')
+	if (localStorage['image'] === true || localStorage['webbugs'] === true)
 		requestTypes.push('image');
-	if (localStorage['xml'] == 'true' || localStorage['xml'] == 'all')
+	if (localStorage['xml'] === true || localStorage['xml'] === 'all')
 		requestTypes.push('xmlhttprequest');
 }
 function initWebRTC() {
 	if (!webrtcsupport) return;
-	if (localStorage['webrtc'] != 'off') {
+	if (localStorage['webrtc'] !== 'off') {
 		chrome.privacy.network.webRTCIPHandlingPolicy.set({
 			value: localStorage['webrtc'],
 		});
@@ -58,9 +64,6 @@ function initWebRTC() {
 			value: 'default',
 		});
 	}
-}
-function getWebRTC() {
-	return webrtcsupport;
 }
 function testWebRTC(rtcstatus) {
 	document.getElementById('webrtc').remove();
@@ -77,7 +80,7 @@ if (typeof chrome.storage !== 'undefined') {
 	storageapi = true;
 }
 if (typeof chrome.webRequest !== 'undefined') {
-	if (experimental == 0) experimental = 1;
+	if (experimental === 0) experimental = 1;
 	var requestUrls = ["http://*/*", "https://*/*"];
 	refreshRequestTypes();
 	if (typeof chrome.webRequest !== 'undefined') {
@@ -87,99 +90,99 @@ if (typeof chrome.webRequest !== 'undefined') {
 	}
 }
 function mitigate(req) {
-	if (localStorage["enable"] == "false" || (localStorage['useragentspoof'] == 'off' && localStorage['cookies'] == 'false' && localStorage['referrerspoof'] == 'off')) {
+	if (localStorage["enable"] === false || (localStorage['useragentspoof'] === 'off' && localStorage['cookies'] === false && localStorage['referrerspoof'] === 'off')) {
 		return;
 	}
 	for (var i = 0; i < req.requestHeaders.length; i++) {
-		if (req.requestHeaders[i].name == 'User-Agent' || req.requestHeaders[i].name == 'Referer' || req.requestHeaders[i].name == 'Cookie') {
+		if (req.requestHeaders[i].name === 'User-Agent' || req.requestHeaders[i].name === 'Referer' || req.requestHeaders[i].name === 'Cookie') {
 			switch (req.requestHeaders[i].name) {
 				case 'Cookie':
-					if (localStorage['cookies'] == 'true' && baddies(req.url, localStorage['annoyancesmode'], localStorage['antisocial']))
+					if (localStorage['cookies'] === true && baddies(req.url, localStorage['annoyancesmode'], localStorage['antisocial']))
 						req.requestHeaders[i].value = '';
 					break;
 				case 'Referer':
-					if (localStorage['referrerspoof'] != 'off' && (localStorage['referrerspoofdenywhitelisted'] == 'true' || enabled(req.url) == 'true')) {
-						if (localStorage['referrerspoof'] == 'same')
+					if (localStorage['referrerspoof'] !== 'off' && (localStorage['referrerspoofdenywhitelisted'] === true || enabled(req.url) === true)) {
+						if (localStorage['referrerspoof'] === 'same')
 							req.requestHeaders[i].value = req.url;
-						else if (localStorage['referrerspoof'] == 'domain')
+						else if (localStorage['referrerspoof'] === 'domain')
 							req.requestHeaders[i].value = req.url.split("//")[0] + '//' + req.url.split("/")[2];
 						else
 							req.requestHeaders[i].value = localStorage['referrerspoof'];
 					}
 					break;
 				case 'User-Agent':
-					if (localStorage['useragentspoof'] != 'off' && (localStorage['uaspoofallow'] == 'true' || enabled(req.url) == 'true')) {
+					if (localStorage['useragentspoof'] !== 'off' && (localStorage['uaspoofallow'] === true || enabled(req.url) === true)) {
 						var os;
-						if (localStorage['useragentspoof_os'] == 'w10') os = 'Windows NT 10.0';
-						else if (localStorage['useragentspoof_os'] == 'w81') os = 'Windows NT 6.3';
-						else if (localStorage['useragentspoof_os'] == 'w8') os = 'Windows NT 6.2';
-						else if (localStorage['useragentspoof_os'] == 'w7') os = 'Windows; U; Windows NT 6.1';
-						else if (localStorage['useragentspoof_os'] == 'wv') os = 'Windows; U; Windows NT 6.0';
-						else if (localStorage['useragentspoof_os'] == 'w2k3') os = 'Windows; U; Windows NT 5.2';
-						else if (localStorage['useragentspoof_os'] == 'wxp') os = 'Windows; U; Windows NT 5.1';
-						else if (localStorage['useragentspoof_os'] == 'w98') os = 'Windows; U; Windows 98';
-						else if (localStorage['useragentspoof_os'] == 'w95') os = 'Windows; U; Windows 95';
-						else if (localStorage['useragentspoof_os'] == 'linux64') os = 'X11; U; Linux x86_64';
-						else if (localStorage['useragentspoof_os'] == 'linux32') os = 'X11; U; Linux x86_32';
-						else if (localStorage['useragentspoof_os'] == 'macsierra') os = 'Macintosh; U; Intel Mac OS X 10_12_2';
-						else if (localStorage['useragentspoof_os'] == 'macelcapitan') os = 'Macintosh; U; Intel Mac OS X 10_11_6';
-						else if (localStorage['useragentspoof_os'] == 'macyosemite') os = 'Macintosh; U; Intel Mac OS X 10_10_5';
-						else if (localStorage['useragentspoof_os'] == 'macmavericks') os = 'Macintosh; U; Intel Mac OS X 10_9_5';
-						else if (localStorage['useragentspoof_os'] == 'macmountainlion') os = 'Macintosh; U; Intel Mac OS X 10_8_5';
-						else if (localStorage['useragentspoof_os'] == 'maclion') os = 'Macintosh; U; Intel Mac OS X 10_7_5';
-						else if (localStorage['useragentspoof_os'] == 'macsnow') os = 'Macintosh; U; Intel Mac OS X 10_6_8';
-						else if (localStorage['useragentspoof_os'] == 'chromeos') os = 'X11; U; CrOS i686 0.13.507';
-						if (localStorage['useragentspoof'] == 'chrome55')
+						if (localStorage['useragentspoof_os'] === 'w10') os = 'Windows NT 10.0';
+						else if (localStorage['useragentspoof_os'] === 'w81') os = 'Windows NT 6.3';
+						else if (localStorage['useragentspoof_os'] === 'w8') os = 'Windows NT 6.2';
+						else if (localStorage['useragentspoof_os'] === 'w7') os = 'Windows; U; Windows NT 6.1';
+						else if (localStorage['useragentspoof_os'] === 'wv') os = 'Windows; U; Windows NT 6.0';
+						else if (localStorage['useragentspoof_os'] === 'w2k3') os = 'Windows; U; Windows NT 5.2';
+						else if (localStorage['useragentspoof_os'] === 'wxp') os = 'Windows; U; Windows NT 5.1';
+						else if (localStorage['useragentspoof_os'] === 'w98') os = 'Windows; U; Windows 98';
+						else if (localStorage['useragentspoof_os'] === 'w95') os = 'Windows; U; Windows 95';
+						else if (localStorage['useragentspoof_os'] === 'linux64') os = 'X11; U; Linux x86_64';
+						else if (localStorage['useragentspoof_os'] === 'linux32') os = 'X11; U; Linux x86_32';
+						else if (localStorage['useragentspoof_os'] === 'macsierra') os = 'Macintosh; U; Intel Mac OS X 10_12_2';
+						else if (localStorage['useragentspoof_os'] === 'macelcapitan') os = 'Macintosh; U; Intel Mac OS X 10_11_6';
+						else if (localStorage['useragentspoof_os'] === 'macyosemite') os = 'Macintosh; U; Intel Mac OS X 10_10_5';
+						else if (localStorage['useragentspoof_os'] === 'macmavericks') os = 'Macintosh; U; Intel Mac OS X 10_9_5';
+						else if (localStorage['useragentspoof_os'] === 'macmountainlion') os = 'Macintosh; U; Intel Mac OS X 10_8_5';
+						else if (localStorage['useragentspoof_os'] === 'maclion') os = 'Macintosh; U; Intel Mac OS X 10_7_5';
+						else if (localStorage['useragentspoof_os'] === 'macsnow') os = 'Macintosh; U; Intel Mac OS X 10_6_8';
+						else if (localStorage['useragentspoof_os'] === 'chromeos') os = 'X11; U; CrOS i686 0.13.507';
+						if (localStorage['useragentspoof'] === 'chrome55')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36';
-						else if (localStorage['useragentspoof'] == 'chrome50')
+						else if (localStorage['useragentspoof'] === 'chrome50')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.94 Safari/537.36 OPR/37.0.2178.43';
-						else if (localStorage['useragentspoof'] == 'chrome14')
+						else if (localStorage['useragentspoof'] === 'chrome14')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.94 Safari/535.1';
-						else if (localStorage['useragentspoof'] == 'chrome13')
+						else if (localStorage['useragentspoof'] === 'chrome13')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.43 Safari/535.1';
-						else if (localStorage['useragentspoof'] == 'chrome12')
+						else if (localStorage['useragentspoof'] === 'chrome12')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.750.0 Safari/534.30';
-						else if (localStorage['useragentspoof'] == 'opera42')
+						else if (localStorage['useragentspoof'] === 'opera42')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36 OPR/42.0.2393.85';
-						else if (localStorage['useragentspoof'] == 'opera37')
+						else if (localStorage['useragentspoof'] === 'opera37')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') Presto/2.9.181 Version/12.00';
-						else if (localStorage['useragentspoof'] == 'opera12')
+						else if (localStorage['useragentspoof'] === 'opera12')
 							req.requestHeaders[i].value = 'Opera/9.80 ('+os+') Presto/2.9.181 Version/12.00';
-						else if (localStorage['useragentspoof'] == 'opera11')
+						else if (localStorage['useragentspoof'] === 'opera11')
 							req.requestHeaders[i].value = 'Opera/9.80 ('+os+') Presto/2.9.168 Version/11.50';
-						else if (localStorage['useragentspoof'] == 'firefox50')
+						else if (localStorage['useragentspoof'] === 'firefox50')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:50.0) Gecko/20100101 Firefox/50.0';
-						else if (localStorage['useragentspoof'] == 'firefox48')
+						else if (localStorage['useragentspoof'] === 'firefox48')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:48.0) Gecko/20100101 Firefox/48.0';
-						else if (localStorage['useragentspoof'] == 'firefox46')
+						else if (localStorage['useragentspoof'] === 'firefox46')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:44.0) Gecko/20100101 Firefox/44.0';
-						else if (localStorage['useragentspoof'] == 'firefox6')
+						else if (localStorage['useragentspoof'] === 'firefox6')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:6.0a2) Gecko/20110613 Firefox/6.0a2';
-						else if (localStorage['useragentspoof'] == 'firefox5')
+						else if (localStorage['useragentspoof'] === 'firefox5')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:5.0) Gecko/20100101 Firefox/5.0';
-						else if (localStorage['useragentspoof'] == 'firefox4')
+						else if (localStorage['useragentspoof'] === 'firefox4')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:2.0.1) Gecko/20110606 Firefox/4.0.1';
-						else if (localStorage['useragentspoof'] == 'firefox3')
+						else if (localStorage['useragentspoof'] === 'firefox3')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; rv:1.9.2.9) Gecko/20100913 Firefox/3.6.9';
-						else if (localStorage['useragentspoof'] == 'ie11')
+						else if (localStorage['useragentspoof'] === 'ie11')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+'; Trident/7.0; rv:11.0) like Gecko';
-						else if (localStorage['useragentspoof'] == 'ie10')
+						else if (localStorage['useragentspoof'] === 'ie10')
 							req.requestHeaders[i].value = 'Mozilla/5.0 (compatible; MSIE 10.0; '+os+'; Trident/6.0)';
-						else if (localStorage['useragentspoof'] == 'ie9')
+						else if (localStorage['useragentspoof'] === 'ie9')
 							req.requestHeaders[i].value = 'Mozilla/5.0 (compatible; MSIE 9.0; '+os+')';
-						else if (localStorage['useragentspoof'] == 'ie8')
+						else if (localStorage['useragentspoof'] === 'ie8')
 							req.requestHeaders[i].value = 'Mozilla/4.0 (compatible; MSIE 8.0; '+os+')';
-						else if (localStorage['useragentspoof'] == 'ie7')
+						else if (localStorage['useragentspoof'] === 'ie7')
 							req.requestHeaders[i].value = 'Mozilla/4.0(compatible; MSIE 7.0; '+os+')';
-						else if (localStorage['useragentspoof'] == 'ie61')
+						else if (localStorage['useragentspoof'] === 'ie61')
 							req.requestHeaders[i].value = 'Mozilla/4.0 (compatible; MSIE 6.1; '+os+')';
-						else if (localStorage['useragentspoof'] == 'ie60')
+						else if (localStorage['useragentspoof'] === 'ie60')
 							req.requestHeaders[i].value = 'Mozilla/4.0 (compatible; MSIE 6.0; '+os+')';
-						else if (localStorage['useragentspoof'] == 'safari8')
+						else if (localStorage['useragentspoof'] === 'safari8')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/600.7.12 (KHTML, like Gecko) Version/8.0.7 Safari/600.7.12';
-						else if (localStorage['useragentspoof'] == 'safari7')
+						else if (localStorage['useragentspoof'] === 'safari7')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A';
-						else if (localStorage['useragentspoof'] == 'safari5')
+						else if (localStorage['useragentspoof'] === 'safari5')
 							req.requestHeaders[i].value = 'Mozilla/5.0 ('+os+') AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1';
 					}
 					break;
@@ -191,6 +194,9 @@ function mitigate(req) {
 function removeParams(str) {
 	return str.replace(/#[^#]*$/, "").replace(/\?[^\?]*$/, "");
 }
+/**
+ * @return {boolean}
+ */
 function UrlInList(url, elems) { // thanks vnagarnaik!
 	var foundElem = false;
 	for (var i = elems.length - 1; i >= 0; i--) {
@@ -202,12 +208,12 @@ function UrlInList(url, elems) { // thanks vnagarnaik!
 	return foundElem;
 }
 function inlineblock(req) {
-	if (req.tabId == -1 || req.url === 'undefined' || localStorage["enable"] == "false") {
+	if (req.tabId === -1 || req.url === 'undefined' || localStorage["enable"] === false) {
 		return;
 	}
     var headers = req.responseHeaders;
-	if (req.type == 'main_frame') {
-		if (experimental == '1' && localStorage['preservesamedomain'] == 'false' && localStorage['script'] == 'true' && enabled(req.url) == 'true') {
+	if (req.type === 'main_frame') {
+		if (experimental === 1 && localStorage['preservesamedomain'] === false && localStorage['script'] === true && enabled(req.url) === true) {
 			headers.push({
 				'name': 'Content-Security-Policy',
 				'value': "script-src 'none'"
@@ -217,17 +223,17 @@ function inlineblock(req) {
     return { responseHeaders: headers };
 }
 function ScriptSafe(req) {
-	if (req.tabId == -1 || req.url === 'undefined' || localStorage["enable"] == "false" || req.url.substring(0,4) != 'http') {
+	if (req.tabId === -1 || req.url === 'undefined' || localStorage["enable"] === false || req.url.substring(0,4) !== 'http') {
 		resetTabData(req.tabId, req.url);
 		return { cancel: false };
 	}
-	if (req.type == 'main_frame') {
+	if (req.type === 'main_frame') {
 		resetTabData(req.tabId, req.url);
 	}
 	if (typeof ITEMS[req.tabId] === 'undefined') return { cancel: false };
 	var reqtype = req.type;
-	if (reqtype == "sub_frame") reqtype = 'frame';
-	else if (reqtype == "main_frame") reqtype = 'page';
+	if (reqtype === "sub_frame") reqtype = 'frame';
+	else if (reqtype === "main_frame") reqtype = 'page';
 	var thirdPartyCheck;
 	var elementStatusCheck;
 	var baddiesCheck = baddies(req.url, localStorage['annoyancesmode'], localStorage['antisocial'], 2);
@@ -235,21 +241,40 @@ function ScriptSafe(req) {
 	var extractedReqDomain = extractDomainFromURL(req.url);
 	var domainCheckStatus = domainCheck(req.url, 1);
 	var tabDomainCheckStatus = domainCheck(extractedDomain, 1);
-	if (tabDomainCheckStatus == '1' || (tabDomainCheckStatus == '-1' && localStorage['mode'] == 'block' && localStorage['paranoia'] == 'true' && localStorage['preservesamedomain'] == 'false')) {
+	if (tabDomainCheckStatus === 1 || (tabDomainCheckStatus === -1 && localStorage['mode'] === 'block' && localStorage['paranoia'] === true && localStorage['preservesamedomain'] === false)) {
 		elementStatusCheck = true;
 		thirdPartyCheck = true;
 	} else {
-		if ((domainCheckStatus == '0' && !(tabDomainCheckStatus == '-1' && localStorage['mode'] == 'block' && localStorage['paranoia'] == 'true')) || (localStorage['preservesamedomain'] == 'strict' && extractedDomain == extractedReqDomain)) thirdPartyCheck = false;
-		else if (localStorage['preservesamedomain'] == 'strict' && extractedDomain != extractedReqDomain) thirdPartyCheck = true;
-		else thirdPartyCheck = thirdParty(req.url, extractedDomain);
-		if ((tabDomainCheckStatus == '-1' && localStorage['mode'] == 'block' && localStorage['paranoia'] == 'true') || (domainCheckStatus != '0' && (domainCheckStatus == '1' || (domainCheckStatus == '-1' && localStorage['mode'] == 'block'))) || ((localStorage['annoyances'] == 'true' && (localStorage['annoyancesmode'] == 'strict' || (localStorage['annoyancesmode'] == 'relaxed' && domainCheckStatus != '0'))) && baddiesCheck == '1') || (localStorage['antisocial'] == 'true' && baddiesCheck == '2'))
+		if ((domainCheckStatus === 0 && !(tabDomainCheckStatus === -1 && localStorage['mode'] === 'block' && localStorage['paranoia'] === true))
+            || (localStorage['preservesamedomain'] === 'strict' && extractedDomain === extractedReqDomain))
+		    thirdPartyCheck = false;
+		else if (localStorage['preservesamedomain'] === 'strict' && extractedDomain !== extractedReqDomain)
+		    thirdPartyCheck = true;
+		else
+		    thirdPartyCheck = thirdParty(req.url, extractedDomain);
+		if ((tabDomainCheckStatus === -1 && localStorage['mode'] === 'block' && localStorage['paranoia'] === true)
+            || (domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && localStorage['mode'] === 'block')))
+            || ((localStorage['annoyances'] === true && (localStorage['annoyancesmode'] === 'strict' || (localStorage['annoyancesmode'] === 'relaxed' && domainCheckStatus !== 0))) && baddiesCheck === 1)
+            || (localStorage['antisocial'] === true && baddiesCheck === 2))
 			elementStatusCheck = true;
-		else elementStatusCheck = false;
+		else
+		    elementStatusCheck = false;
 	}
 	var utmCleanURL = utmClean(req.url);
 	var hashCleanURL = hashTrackingClean(req.url);
-	if (elementStatusCheck && baddiesCheck && reqtype == "image") reqtype = 'webbug';
-	if ((reqtype == "page" && localStorage['mode'] == 'block' && (domainCheckStatus == '1' || ((localStorage['annoyances'] == 'true' && (localStorage['annoyancesmode'] == 'strict' || (localStorage['annoyancesmode'] == 'relaxed' && domainCheckStatus != '0'))) && baddiesCheck == '1') || (localStorage['antisocial'] == 'true' && baddiesCheck == '2'))) || (reqtype == "frame" && (localStorage['iframe'] == 'true' || localStorage['frame'] == 'true')) || (reqtype == "script" && localStorage['script'] == 'true') || (reqtype == "object" && (localStorage['object'] == 'true' || localStorage['embed'] == 'true')) || (reqtype == "image" && localStorage['image'] == 'true') || reqtype == "webbug" || (reqtype == "xmlhttprequest" && ((localStorage['xml'] == 'true' && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck)) || localStorage['xml'] == 'all'))) {
+	if (elementStatusCheck && baddiesCheck && reqtype === "image") reqtype = 'webbug';
+	if ((reqtype === "page"
+            && localStorage['mode'] === 'block'
+            && (domainCheckStatus === 1
+                || ((localStorage['annoyances'] === true && (localStorage['annoyancesmode'] === 'strict' || (localStorage['annoyancesmode'] === 'relaxed' && domainCheckStatus !== 0)))
+                    && baddiesCheck === 1) || (localStorage['antisocial'] === true && baddiesCheck === 2)))
+        || (reqtype === "frame"
+            && (localStorage['iframe'] === true || localStorage['frame'] === true))
+        || (reqtype === "script" && localStorage['script'] === true)
+        || (reqtype === "object" && (localStorage['object'] === true || localStorage['embed'] === true))
+        || (reqtype === "image" && localStorage['image'] === true)
+        || reqtype === "webbug"
+        || (reqtype === "xmlhttprequest" && ((localStorage['xml'] === true && (thirdPartyCheck || domainCheckStatus === 1 || baddiesCheck)) || localStorage['xml'] === 'all'))) {
 		// request qualified for filtering, so continue.
 	} else {
 		if (utmCleanURL) return { redirectUrl: utmCleanURL };
@@ -257,49 +282,59 @@ function ScriptSafe(req) {
 		return { cancel: false };
 	}
 	var cleanedUrl = removeParams(req.url);
-	if (elementStatusCheck && ((localStorage['preservesamedomain'] != 'false' && (thirdPartyCheck || domainCheckStatus == '1' || baddiesCheck)) || localStorage['preservesamedomain'] == 'false')) {
-		if (typeof ITEMS[req.tabId]['blocked'] === 'undefined') ITEMS[req.tabId]['blocked'] = [];
+	if (elementStatusCheck
+        && ((localStorage['preservesamedomain'] !== false && (thirdPartyCheck || domainCheckStatus === 1 || baddiesCheck))
+            || localStorage['preservesamedomain'] === false)) {
+		if (typeof ITEMS[req.tabId]['blocked'] === 'undefined')
+		    ITEMS[req.tabId]['blocked'] = [];
 		if (!UrlInList(cleanedUrl, ITEMS[req.tabId]['blocked'])) {
-			if (extractedReqDomain.substr(0,4) == 'www.') extractedReqDomain = extractedReqDomain.substr(4);
+			if (extractedReqDomain.substr(0,4) === 'www.')
+			    extractedReqDomain = extractedReqDomain.substr(4);
 			ITEMS[req.tabId]['blocked'].push([cleanedUrl, reqtype.toUpperCase(), extractedReqDomain, domainCheckStatus, tabDomainCheckStatus, baddiesCheck, false]);
 			updateCount(req.tabId);
 		}
-		if (reqtype == 'frame') {
+		if (reqtype === 'frame') {
 			return { redirectUrl: 'about:blank' };
-		} else if (reqtype == 'webbug' || reqtype == 'image') {
+		} else if (reqtype === 'webbug' || reqtype === 'image') {
 			return { redirectUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==' };
 		}
 		return { cancel: true };
 	} else {
-		if (typeof ITEMS[req.tabId]['allowed'] === 'undefined') ITEMS[req.tabId]['allowed'] = [];
+		if (typeof ITEMS[req.tabId]['allowed'] === 'undefined')
+		    ITEMS[req.tabId]['allowed'] = [];
 		if (!UrlInList(cleanedUrl, ITEMS[req.tabId]['allowed'])) {
-			if (extractedReqDomain.substr(0,4) == 'www.') extractedReqDomain = extractedReqDomain.substr(4);
+			if (extractedReqDomain.substr(0,4) === 'www.')
+			    extractedReqDomain = extractedReqDomain.substr(4);
 			ITEMS[req.tabId]['allowed'].push([cleanedUrl, reqtype.toUpperCase(), extractedReqDomain, domainCheckStatus, baddiesCheck]);
 		}
 	}
-	if (utmCleanURL) return { redirectUrl: utmCleanURL };
-	if (hashCleanURL) return { redirectUrl: hashCleanURL };
+	if (utmCleanURL)
+	    return { redirectUrl: utmCleanURL };
+	if (hashCleanURL)
+	    return { redirectUrl: hashCleanURL };
 	return { cancel: false };
 }
 function utmClean(url) {
-	if (localStorage['utm'] == "true") {
+	if (localStorage['utm'] === true) {
 		var paramstart = url.indexOf("?");
 		var sanitized = url;
-		if (paramstart != -1) {
+		if (paramstart !== -1) {
 			if (url.indexOf("utm_") > paramstart) {
 				sanitized = sanitized.replace(/[\?\&]utm_(?:cid|reader|term|content|source|medium|campaign|name)=[^&#]+/ig, "");
-				if (sanitized.charAt(paramstart) == "&") sanitized = sanitized.substring(0, paramstart)+"?"+sanitized.substring(paramstart+1);
+				if (sanitized.charAt(paramstart) === "&")
+				    sanitized = sanitized.substring(0, paramstart)+"?"+sanitized.substring(paramstart+1);
 			}
 		}
 		sanitized = sanitized.replace(/#utm_(?:cid|reader|term|content|source|medium|campaign)=.+/i, "");
-		if (url != sanitized) return sanitized;
+		if (url !== sanitized)
+		    return sanitized;
 	}
 	return false;
 }
 function hashTrackingClean(url) {
-	if (localStorage['hashchecking'] == "true") {
+	if (localStorage['hashchecking'] === true) {
 		var hashstart = url.indexOf("#");
-		if (hashstart != -1) {
+		if (hashstart !== -1) {
 			if (url.indexOf("=") > hashstart) {
 				return url.substring(0, hashstart);
 			}
@@ -309,68 +344,83 @@ function hashTrackingClean(url) {
 }
 function enabled(url) {
 	var domainCheckStatus = domainCheck(url);
-	if (localStorage["enable"] == "true" && domainCheckStatus != '0' && (domainCheckStatus == '1' || (localStorage["mode"] == "block" && domainCheckStatus == '-1')) && url.indexOf('https://chrome.google.com/webstore') == -1 && (url.substring(0,4) == 'http' || url == 'chrome://newtab/'))
-		return 'true';
-	return 'false';
+	return localStorage["enable"] === true
+        && domainCheckStatus !== 0
+        && (domainCheckStatus === 1 || (localStorage["mode"] === "block" && domainCheckStatus === -1))
+        && url.indexOf('https://chrome.google.com/webstore') === -1
+        && (url.substring(0, 4) === 'http' || url === 'chrome://newtab/');
 }
+/**
+ *
+ * @param domainname
+ * @param fptype
+ * @returns {number}
+ */
 function enabledfp(domainname, fptype) {
-	if ((localStorage['canvas'] == 'false' && fptype == 'fpCanvas') || (localStorage['canvasfont'] == 'false' && fptype == 'fpCanvasFont') || (localStorage['audioblock'] == 'false' && fptype == 'fpAudio') || (localStorage['webgl'] == 'false' && fptype == 'fpWebGL') || (localStorage['battery'] == 'false' && fptype == 'fpBattery') || (localStorage['webrtcdevice'] == 'false' && fptype == 'fpDevice') || (localStorage['gamepad'] == 'false' && fptype == 'fpGamepad') || (localStorage['webvr'] == 'false' && fptype == 'fpWebVR') || (localStorage['bluetooth'] == 'false' && fptype == 'fpBluetooth') || (localStorage['clientrects'] == 'false' && fptype == 'fpClientRectangles') || (localStorage['clipboard'] == 'false' && fptype == 'fpClipboard')) return '-1';
-	if (in_array(domainname, fpLists[fptype])) return '1';
-	if (in_array(domainname, fpListsSession[fptype])) return '2';
-	return '-1';
+	if ((localStorage['canvas'] === false && fptype === 'fpCanvas')
+        || (localStorage['canvasfont'] === false && fptype === 'fpCanvasFont')
+        || (localStorage['audioblock'] === false && fptype === 'fpAudio')
+        || (localStorage['webgl'] === false && fptype === 'fpWebGL')
+        || (localStorage['battery'] === false && fptype === 'fpBattery')
+        || (localStorage['webrtcdevice'] === false && fptype === 'fpDevice')
+        || (localStorage['gamepad'] === false && fptype === 'fpGamepad')
+        || (localStorage['webvr'] === false && fptype === 'fpWebVR')
+        || (localStorage['bluetooth'] === false && fptype === 'fpBluetooth')
+        || (localStorage['clientrects'] === false && fptype === 'fpClientRectangles')
+        || (localStorage['clipboard'] === false && fptype === 'fpClipboard')
+    )
+	    return -1;
+	if (in_array(domainname, fpLists[fptype])) return 1;
+	if (in_array(domainname, fpListsSession[fptype])) return 2;
+	return -1;
 }
+/**
+ * @param {string} domain
+ * @param {number} req
+ * @returns {number} -1 = unknown, 0 = allow, 1 = block
+ */
 function domainCheck(domain, req) {
 	if (req === undefined) {
 		var baddiesCheck = baddies(domain, localStorage['annoyancesmode'], localStorage['antisocial']);
-		if (((localStorage['annoyances'] == 'true' && localStorage['annoyancesmode'] == 'strict' && baddiesCheck == '1') || (localStorage['antisocial'] == 'true' && baddiesCheck == '2') || (localStorage['annoyances'] == 'true' && localStorage['annoyancesmode'] == 'relaxed' && baddiesCheck))) return '1';
+		if (((localStorage['annoyances'] === true && localStorage['annoyancesmode'] === 'strict' && baddiesCheck === 1)
+			|| (localStorage['antisocial'] === true && baddiesCheck === 2)
+            || (localStorage['annoyances'] === true && localStorage['annoyancesmode'] === 'relaxed' && baddiesCheck))) return 1;
 	}
 	var domainname = extractDomainFromURL(domain);
-	if (req != '2') {
-		if (localStorage['mode'] == 'block' && in_array(domainname, sessionWhiteList)) return '0';
-		if (localStorage['mode'] == 'allow' && in_array(domainname, sessionBlackList)) return '1';
+	if (req !== 2) {
+		if (localStorage['mode'] === 'block' && in_array(domainname, sessionWhiteList)) return 0;
+		if (localStorage['mode'] === 'allow' && in_array(domainname, sessionBlackList)) return 1;
 	}
-	if (in_array(domainname, whiteList)) return '0';
-	if (in_array(domainname, blackList)) return '1';
+	if (in_array(domainname, whiteList)) return 0;
+	if (in_array(domainname, blackList)) return 1;
 	if (req === undefined) {
-		if (localStorage['annoyances'] == 'true' && localStorage['annoyancesmode'] == 'relaxed' && baddiesCheck) return '1';
+		if (localStorage['annoyances'] === true && localStorage['annoyancesmode'] === 'relaxed' && baddiesCheck) return 1;
 	}
-	return '-1';
+	return -1;
 }
-function domainSort(hosts) {
-	var sorted_hosts = new Array();
-	var split_hosts = new Array();
-	if (hosts.length > 0) {
-		if (typeof hosts[0] === 'object') {
-			for (var h in hosts) {
-				split_hosts.push([getDomain(hosts[h][2]), hosts[h][0], hosts[h][1], hosts[h][2], hosts[h][3], hosts[h][4], hosts[h][5], hosts[h][6]]);
-			}
-			split_hosts.sort();
-			for (var h in split_hosts) {
-				sorted_hosts.push([split_hosts[h][1], split_hosts[h][2], split_hosts[h][3], split_hosts[h][4], split_hosts[h][5], split_hosts[h][6], split_hosts[h][7]]);
-			}
-		} else {
-			for (var h in hosts) {
-				split_hosts.push([getDomain(hosts[h]), hosts[h]]);
-			}
-			split_hosts.sort();
-			for (var h in split_hosts) {
-				sorted_hosts.push(split_hosts[h][1]);
-			}
-		}
-		return sorted_hosts;
-	}
-	return hosts;
-}
+/**
+ * @param {string} domain
+ * @returns {number} 0 = unknown, 1 = trusted, 2 = distrusted
+ */
 function trustCheck(domain) {
-	if (in_array(domain, trustList)) return '1';
-	if (in_array(domain, distrustList)) return '2';
-	return false;
+	if (in_array(domain, trustList)) return 1;
+	if (in_array(domain, distrustList)) return 2;
+	return 0;
 }
+/**
+ * @param {string} domain
+ * @param {number} mode
+ * @returns {boolean}
+ */
 function topHandler(domain, mode) {
 	if (domain) {
-		if (!domain.match(/^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})$/g) && !domain.match(/^(?:\[[A-Fa-f0-9:.]+\])(:[0-9]+)?$/g)) domain = '**.'+getDomain(domain);
-		if (mode != '0' && mode != '1') fpDomainHandler(domain, mode, 1);
-		else domainHandler(domain, mode);
+		if (!domain.match(/^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})$/g)
+            && !domain.match(/^(?:\[[A-Fa-f0-9:.]+\])(:[0-9]+)?$/g))
+		    domain = '**.'+getDomain(domain);
+		if (mode !== 0 && mode !== 1)
+		    fpDomainHandler(domain, mode, 1);
+		else
+		    domainHandler(domain, mode);
 		freshSync();
 		changed = true;
 		return true;
@@ -381,44 +431,56 @@ function haystackSearch(needle, haystack) {
 	var keys = [];
 	var rootdomain = getDomain(needle);
 	for (var key in haystack) {
-		if (rootdomain == getDomain(haystack[key])) {
+		if (rootdomain === getDomain(haystack[key])) {
 			keys.push(haystack[key]);
 		}
 	}
 	return keys;
 }
+/**
+ * @param {string} domain
+ * @param action
+ * @param {number} listtype
+ * @returns {boolean}
+ */
 function domainHandler(domain,action,listtype) {
-	if (listtype === undefined)
-		listtype = 0;
-	if (domain) {
-		action = parseInt(action);
-		// Initialize local storage
-		if (listtype == 0) {
-			if (typeof(localStorage['whiteList'])==='undefined') localStorage['whiteList'] = JSON.stringify([]);
-			if (typeof(localStorage['blackList'])==='undefined') localStorage['blackList'] = JSON.stringify([]);
-			var tempWhitelist = JSON.parse(localStorage['whiteList']);
-			var tempBlacklist = JSON.parse(localStorage['blackList']);
-		} else if (listtype == 1) {
-			if (typeof(sessionStorage['whiteList'])==='undefined') sessionStorage['whiteList'] = JSON.stringify([]);
-			if (typeof(sessionStorage['blackList'])==='undefined') sessionStorage['blackList'] = JSON.stringify([]);
-			var tempWhitelist = JSON.parse(sessionStorage['whiteList']);
-			var tempBlacklist = JSON.parse(sessionStorage['blackList']);
+    if (listtype === undefined)
+        listtype = 0;
+    if (domain) {
+        action = parseInt(action);
+        // Initialize local storage
+        var tempBlacklist;
+        var tempWhitelist;
+        if (listtype === 0) {
+            if (typeof(localStorage['whiteList']) === 'undefined') localStorage['whiteList'] = JSON.stringify([]);
+            if (typeof(localStorage['blackList']) === 'undefined') localStorage['blackList'] = JSON.stringify([]);
+            tempWhitelist = JSON.parse(localStorage['whiteList']);
+            tempBlacklist = JSON.parse(localStorage['blackList']);
+        } else if (listtype === 1) {
+            if (typeof(sessionStorage['whiteList']) === 'undefined') sessionStorage['whiteList'] = JSON.stringify([]);
+            if (typeof(sessionStorage['blackList']) === 'undefined') sessionStorage['blackList'] = JSON.stringify([]);
+            tempWhitelist = JSON.parse(sessionStorage['whiteList']);
+            tempBlacklist = JSON.parse(sessionStorage['blackList']);
 		}
 		// Remove domain from whitelist and blacklist
 		var pos = tempWhitelist.indexOf(domain);
-		if (pos != -1) tempWhitelist.splice(pos,1);
+		if (pos !== -1)
+		    tempWhitelist.splice(pos,1);
 		pos = tempBlacklist.indexOf(domain);
-		if (pos != -1) tempBlacklist.splice(pos,1);
-		if (domain.substr(0,4)=='www.') {
+		if (pos !== -1)
+		    tempBlacklist.splice(pos,1);
+		if (domain.substr(0,4)==='www.') {
 			domain = domain.substr(4);
 			pos = tempWhitelist.indexOf(domain);
-			if (pos != -1) tempWhitelist.splice(pos,1);
+			if (pos !== -1)
+			    tempWhitelist.splice(pos,1);
 			pos = tempBlacklist.indexOf(domain);
-			if (pos != -1) tempBlacklist.splice(pos,1);
+			if (pos !== -1)
+			    tempBlacklist.splice(pos,1);
 		}
-		if (listtype == 0 && action != 2) {
+		if (listtype === 0 && action !== 2) {
 			var tempDomain;
-			if (domain.substr(0,3)=='**.') {
+			if (domain.substr(0,3)==='**.') {
 				tempDomain = domain.substr(3);
 				var whiteInstances = haystackSearch(tempDomain, tempWhitelist);
 				var blackInstances = haystackSearch(tempDomain, tempBlacklist);
@@ -426,7 +488,7 @@ function domainHandler(domain,action,listtype) {
 				var blackInstancesCount = blackInstances.length;
 				if (whiteInstancesCount || blackInstancesCount) {
 					var lingo = '';
-					if (action == 1) lingo = 'dis';
+					if (action === 1) lingo = 'dis';
 					if (confirm('ScriptSafe detected '+(whiteInstancesCount+blackInstancesCount)+' existing rule(s) for '+tempDomain+' ('+whiteInstancesCount+' whitelist and '+blackInstancesCount+' blacklist).\r\nDo you want to delete them before '+lingo+'trusting the entire '+tempDomain+' domain in order to avoid conflicts?\r\nNote: this might not necessarily remove all conflicting entries, particularly if they use regex (e.g. d?main.com).')) {
 						if (whiteInstancesCount) {
 							for (var x=0; x<whiteInstancesCount; x++) {
@@ -447,10 +509,10 @@ function domainHandler(domain,action,listtype) {
 			} else {
 				tempDomain = '**.'+getDomain(domain);
 			}
-			var pos = tempWhitelist.indexOf(tempDomain);
-			if (pos != -1) tempWhitelist.splice(pos,1);
+			pos = tempWhitelist.indexOf(tempDomain);
+			if (pos !== -1) tempWhitelist.splice(pos,1);
 			pos = tempBlacklist.indexOf(tempDomain);
-			if (pos != -1) tempBlacklist.splice(pos,1);
+			if (pos !== -1) tempBlacklist.splice(pos,1);
 		}
 		switch(action) {
 			case 0:	// Whitelist
@@ -462,11 +524,11 @@ function domainHandler(domain,action,listtype) {
 			case 2:	// Remove
 				break;
 		}
-		if (listtype == 0) {
+		if (listtype === 0) {
 			localStorage['whiteList'] = JSON.stringify(tempWhitelist);
 			localStorage['blackList'] = JSON.stringify(tempBlacklist);
 			cacheLists();
-		} else if (listtype == 1) {
+		} else if (listtype === 1) {
 			sessionStorage['whiteList'] = JSON.stringify(tempWhitelist);
 			sessionStorage['blackList'] = JSON.stringify(tempBlacklist);
 			tempWhitelist = tempWhitelist.sort();
@@ -478,30 +540,38 @@ function domainHandler(domain,action,listtype) {
 	}
 	return false;
 }
+/**
+ * @param {string} domain
+ * @param {number} listtype
+ * @param action
+ * @param {number} temp
+ * @returns {boolean}
+ */
 function fpDomainHandler(domain,listtype,action,temp) {
-	if (temp === undefined)
-		temp = 0;
-	if (domain) {
-		action = parseInt(action);
-		// Initialize local storage
-		if (temp == 0) {
-			if (typeof(localStorage[listtype])==='undefined') localStorage[listtype] = JSON.stringify([]);
-			var tempList = JSON.parse(localStorage[listtype]);
-		} else if (temp == 1) {
+    if (temp === undefined)
+        temp = 0;
+    if (domain) {
+        action = parseInt(action);
+        // Initialize local storage
+        var tempList;
+        if (temp === 0) {
+            if (typeof(localStorage[listtype]) === 'undefined') localStorage[listtype] = JSON.stringify([]);
+            tempList = JSON.parse(localStorage[listtype]);
+		} else if (temp === 1) {
 			if (typeof(localStorage[listtype])==='undefined') sessionStorage[listtype] = JSON.stringify([]);
-			var tempList = JSON.parse(sessionStorage[listtype]);
+			tempList = JSON.parse(sessionStorage[listtype]);
 		}
 		// Remove domain from list
 		var pos = tempList.indexOf(domain);
-		if (pos != -1) tempList.splice(pos,1);
-		if (domain.substr(0,4)=='www.') {
+		if (pos !== -1) tempList.splice(pos,1);
+		if (domain.substr(0,4)==='www.') {
 			domain = domain.substr(4);
 			pos = tempList.indexOf(domain);
-			if (pos != -1) tempList.splice(pos,1);
+			if (pos !== -1) tempList.splice(pos,1);
 		}
-		if (action != -1) {
+		if (action !== -1) {
 			var tempDomain;
-			if (domain.substr(0,3)=='**.') {
+			if (domain.substr(0,3)==='**.') {
 				tempDomain = domain.substr(3);
 				var instances = haystackSearch(tempDomain, tempList);
 				var instancesCount = instances.length;
@@ -521,8 +591,8 @@ function fpDomainHandler(domain,listtype,action,temp) {
 			} else {
 				tempDomain = '**.'+getDomain(domain);
 			}
-			var pos = tempList.indexOf(tempDomain);
-			if (pos != -1) tempList.splice(pos,1);
+			pos = tempList.indexOf(tempDomain);
+			if (pos !== -1) tempList.splice(pos,1);
 		}
 		switch(action) {
 			case 1:	// Add
@@ -531,11 +601,11 @@ function fpDomainHandler(domain,listtype,action,temp) {
 			case -1: // Remove
 				break;
 		}
-		if (temp == 0) {
+		if (temp === 0) {
 			localStorage[listtype] = JSON.stringify(tempList);
 			tempList = tempList.sort();
 			fpLists[listtype] = tempList;
-		} else if (temp == 1) {
+		} else if (temp === 1) {
 			sessionStorage[listtype] = JSON.stringify(tempList);
 			tempList = tempList.sort();
 			fpListsSession[listtype] = tempList;
@@ -552,63 +622,63 @@ function defaultOptionValue(opt, val) {
 }
 function setDefaultOptions() {
 	defaultOptionValue("version", version);
-	defaultOptionValue("sync", "false");
-	defaultOptionValue("syncenable", "false");
-	defaultOptionValue("syncnotify", "true");
-	defaultOptionValue("syncfromnotify", "true");
+	defaultOptionValue("sync", false);
+	defaultOptionValue("syncenable", false);
+	defaultOptionValue("syncnotify", true);
+	defaultOptionValue("syncfromnotify", true);
 	defaultOptionValue("lastSync", "0");
-	defaultOptionValue("updatenotify", "true");
-	defaultOptionValue("enable", "true");
+	defaultOptionValue("updatenotify", true);
+	defaultOptionValue("enable", true);
 	defaultOptionValue("mode", "block");
-	defaultOptionValue("refresh", "true");
-	defaultOptionValue("script", "true");
-	defaultOptionValue("noscript", "false");
-	defaultOptionValue("object", "true");
-	defaultOptionValue("applet", "true");
-	defaultOptionValue("embed", "true");
-	defaultOptionValue("iframe", "true");
-	defaultOptionValue("frame", "true");
-	defaultOptionValue("audio", "true");
-	defaultOptionValue("video", "true");
-	defaultOptionValue("image", "false");
-	defaultOptionValue("showcontext", "true");
-	defaultOptionValue("canvas", "false");
-	defaultOptionValue("canvasfont", "false");
-	defaultOptionValue("clientrects", "false");
-	defaultOptionValue("audioblock", "false");
-	defaultOptionValue("webgl", "false");
-	defaultOptionValue("battery", "false");
-	defaultOptionValue("webrtcdevice", "false");
-	defaultOptionValue("gamepad", "false");
-	defaultOptionValue("webvr", "false");
-	defaultOptionValue("bluetooth", "false");
-	defaultOptionValue("timezone", "false");
-	defaultOptionValue("keyboard", "false");
+	defaultOptionValue("refresh", true);
+	defaultOptionValue("script", true);
+	defaultOptionValue("noscript", false);
+	defaultOptionValue("object", true);
+	defaultOptionValue("applet", true);
+	defaultOptionValue("embed", true);
+	defaultOptionValue("iframe", true);
+	defaultOptionValue("frame", true);
+	defaultOptionValue("audio", true);
+	defaultOptionValue("video", true);
+	defaultOptionValue("image", false);
+	defaultOptionValue("showcontext", true);
+	defaultOptionValue("canvas", false);
+	defaultOptionValue("canvasfont", false);
+	defaultOptionValue("clientrects", false);
+	defaultOptionValue("audioblock", false);
+	defaultOptionValue("webgl", false);
+	defaultOptionValue("battery", false);
+	defaultOptionValue("webrtcdevice", false);
+	defaultOptionValue("gamepad", false);
+	defaultOptionValue("webvr", false);
+	defaultOptionValue("bluetooth", false);
+	defaultOptionValue("timezone", false);
+	defaultOptionValue("keyboard", false);
 	defaultOptionValue("keydelta", "40");
-	defaultOptionValue("xml", "true");
-	defaultOptionValue("annoyances", "true");
+	defaultOptionValue("xml", true);
+	defaultOptionValue("annoyances", true);
 	defaultOptionValue("annoyancesmode", "relaxed");
-	defaultOptionValue("antisocial", "false");
-	defaultOptionValue("preservesamedomain", "false");
-	defaultOptionValue("webbugs", "true");
-	defaultOptionValue("utm", "false");
-	defaultOptionValue("hashchecking", "false");
+	defaultOptionValue("antisocial", false);
+	defaultOptionValue("preservesamedomain", false);
+	defaultOptionValue("webbugs", true);
+	defaultOptionValue("utm", false);
+	defaultOptionValue("hashchecking", false);
 	defaultOptionValue("webrtc", "default_public_interface_only");
-	defaultOptionValue("classicoptions", "false");
-	defaultOptionValue("rating", "true");
-	defaultOptionValue("referrer", "true");
+	defaultOptionValue("classicoptions", false);
+	defaultOptionValue("rating", true);
+	defaultOptionValue("referrer", true);
 	defaultOptionValue("linktarget", "off");
-	defaultOptionValue("domainsort", "true");
+	defaultOptionValue("domainsort", true);
 	defaultOptionValue("useragentspoof", "off");
 	defaultOptionValue("useragentspoof_os", "off");
-	defaultOptionValue("uaspoofallow", "false");
+	defaultOptionValue("uaspoofallow", false);
 	defaultOptionValue("referrerspoof", "off");
-	defaultOptionValue("referrerspoofdenywhitelisted", "false");
-	defaultOptionValue("cookies", "true");
-	defaultOptionValue("paranoia", "false");
-	defaultOptionValue("dataurl", "false");
-	defaultOptionValue("clipboard", "false");
-	defaultOptionValue("optionslist", "false");
+	defaultOptionValue("referrerspoofdenywhitelisted", false);
+	defaultOptionValue("cookies", true);
+	defaultOptionValue("paranoia", false);
+	defaultOptionValue("dataurl", false);
+	defaultOptionValue("clipboard", false);
+	defaultOptionValue("optionslist", false);
 	if (optionExists("updatemessagenotify")) delete localStorage['updatemessagenotify'];
 	if (!optionExists("blackList")) localStorage['blackList'] = JSON.stringify([]);
 	if (!optionExists("whiteList")) localStorage['whiteList'] = JSON.stringify(["*.googlevideo.com"]);
@@ -648,11 +718,11 @@ function initCount(tabId) {
 	var TAB_ITEMS = ITEMS[tabId] || (ITEMS[tabId] = [0]);
 	var TAB_BLOCKED_COUNT = TAB_ITEMS[0];
 	chrome.browserAction.setBadgeBackgroundColor({ color: [208, 0, 24, 255], tabId: tabId });
-	if (TAB_BLOCKED_COUNT != 0) chrome.browserAction.setBadgeText({tabId: tabId, text: TAB_BLOCKED_COUNT + ''});
+	if (TAB_BLOCKED_COUNT !== 0) chrome.browserAction.setBadgeText({tabId: tabId, text: TAB_BLOCKED_COUNT + ''});
 }
 function removeHash(str) {
 	var hashindex = str.indexOf("#");
-	if (hashindex != -1) return str.substr(0, hashindex);
+	if (hashindex !== -1) return str.substr(0, hashindex);
 	return str;
 }
 function resetTabData(id, url) {
@@ -682,11 +752,11 @@ function revokeTemp() {
 	sessionStorage['fpClipboard'] = JSON.stringify([]);
 }
 function statuschanger() {
-	if (localStorage['enable'] == 'true') {
-		localStorage['enable'] = 'false';
+	if (localStorage['enable'] === true) {
+		localStorage['enable'] = false;
 		chrome.browserAction.setIcon({path: "../img/IconDisabled.png"});
 	} else {
-		localStorage['enable'] = 'true';
+		localStorage['enable'] = true;
 		chrome.browserAction.setIcon({path: "../img/IconForbidden.png"});
 	}
 	reinitContext();
@@ -694,22 +764,24 @@ function statuschanger() {
 function tempHandler(request) {
 	if (typeof request.url === 'object') {
 		for (var i=0;i<request.url.length;i++) {
-			if (request.url[i][0] != 'no.script' && request.url[i][0] != 'web.bug') {
+			if (request.url[i][0] !== 'no.script' && request.url[i][0] !== 'web.bug') {
 				var baddiesStatus = baddies(request.url[i], localStorage['annoyancesmode'], localStorage['antisocial']);
-				if ((localStorage['annoyances'] == 'true' && localStorage['annoyancesmode'] == 'strict' && baddiesStatus == 1) || (localStorage['antisocial'] == 'true' && baddiesStatus == '2')) {
+				if ((localStorage['annoyances'] === true && localStorage['annoyancesmode'] === 'strict' && baddiesStatus === 1)
+                    || (localStorage['antisocial'] === true && baddiesStatus === 2)) {
 					// do nothing
 				} else {
-					if (request.mode == 'block') domainHandler(request.url[i], 0, 1);
+					if (request.mode === 'block') domainHandler(request.url[i], 0, 1);
 					else domainHandler(request.url[i], 1, 1);
 				}
 			}
 		}
 	} else {
 		var baddiesStatus = baddies(request.url, localStorage['annoyancesmode'], localStorage['antisocial']);
-		if ((localStorage['annoyances'] == 'true' && localStorage['annoyancesmode'] == 'strict' && baddiesStatus == 1) || (localStorage['antisocial'] == 'true' && baddiesStatus == '2')) {
+		if ((localStorage['annoyances'] === true && localStorage['annoyancesmode'] === 'strict' && baddiesStatus === 1)
+            || (localStorage['antisocial'] === true && baddiesStatus === 2)) {
 			// do nothing
 		} else {
-			if (request.mode == 'block') domainHandler(request.url, 0, 1);
+			if (request.mode === 'block') domainHandler(request.url, 0, 1);
 			else domainHandler(request.url, 1, 1);
 		}
 	}
@@ -729,26 +801,26 @@ chrome.tabs.onRemoved.addListener(function(tabid) {
 	if (typeof ITEMS[tabid] !== 'undefined') delete ITEMS[tabid];
 });
 chrome.tabs.onUpdated.addListener(function(tabid, changeinfo, tab) {
-	if (localStorage['enable'] == 'true') {
-		if (changeinfo.status == 'loading') {
+	if (localStorage['enable'] === true) {
+		if (changeinfo.status === 'loading') {
 			var icontype = "Allowed";
-			if (enabled(tab.url) == "true")
+			if (enabled(tab.url) === true)
 				icontype = "Forbidden";
 			var extractedDomain = extractDomainFromURL(tab.url);
 			if (in_array(extractedDomain, sessionWhiteList) || in_array(extractedDomain, sessionBlackList))
 				icontype = "Temp";
 			chrome.browserAction.setIcon({path: "../img/Icon"+icontype+".png", tabId: tabid});
-		} else if (changeinfo.status == "complete") {
+		} else if (changeinfo.status === "complete") {
 			if (typeof ITEMS[tabid] !== 'undefined') {
 				changed = true;
-				if (localStorage['mode'] == 'block' && typeof ITEMS[tabid]['allowed'] !== 'undefined') {
+				if (localStorage['mode'] === 'block' && typeof ITEMS[tabid]['allowed'] !== 'undefined') {
 					for (var i=0; i<ITEMS[tabid]['allowed'].length; i++) {
 						if (in_array(extractDomainFromURL(ITEMS[tabid]['allowed'][i][0]), sessionWhiteList)) {
 							chrome.browserAction.setIcon({path: "../img/IconTemp.png", tabId: tabid});
 							break;
 						}
 					}
-				} else if (localStorage['mode'] == 'allow' && typeof ITEMS[tabid]['blocked'] !== 'undefined') {
+				} else if (localStorage['mode'] === 'allow' && typeof ITEMS[tabid]['blocked'] !== 'undefined') {
 					for (var i=0; i<ITEMS[tabid]['blocked'].length; i++) {
 						if (in_array(extractDomainFromURL(ITEMS[tabid]['blocked'][i][0]), sessionBlackList)) {
 							chrome.browserAction.setIcon({path: "../img/IconTemp.png", tabId: tabid});
@@ -762,7 +834,7 @@ chrome.tabs.onUpdated.addListener(function(tabid, changeinfo, tab) {
 });
 chrome.runtime.onConnect.addListener(function(port) {
 	port.onMessage.addListener(function(msg) {
-		if (port.name == 'popuplifeline') {
+		if (port.name === 'popuplifeline') {
 			if (msg.url && msg.tid) {
 				popup=[msg.url, msg.tid];
 			}
@@ -770,24 +842,84 @@ chrome.runtime.onConnect.addListener(function(port) {
 	});
 	port.onDisconnect.addListener(function() {
 		if (popup.length > 0) {
-			if (localStorage['refresh'] == 'true') chrome.tabs.update(popup[1], {url: popup[0]});
+			if (localStorage['refresh'] === true) chrome.tabs.update(popup[1], {url: popup[0]});
 			popup=[];
 		}
 	});
 });
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
-	if (request.reqtype == 'get-settings') {
+	if (request.reqtype === 'get-settings') {
 		var fpListStatus = [];
 		var extractedDomain = extractDomainFromURL(sender.tab.url);
 		for (var i in fpTypes) {
 			fpListStatus[fpTypes[i]] = enabledfp(extractedDomain, fpTypes[i]);
 		}
-		sendResponse({status: localStorage['enable'], enable: enabled(sender.tab.url), fp_canvas: fpListStatus['fpCanvas'], fp_canvasfont: fpListStatus['fpCanvasFont'], fp_audio: fpListStatus['fpAudio'], fp_webgl: fpListStatus['fpWebGL'], fp_battery: fpListStatus['fpBattery'], fp_device: fpListStatus['fpDevice'], fp_gamepad: fpListStatus['fpGamepad'], fp_webvr: fpListStatus['fpWebVR'], fp_bluetooth: fpListStatus['fpBluetooth'], fp_clientrectangles: fpListStatus['fpClientRectangles'], fp_clipboard: fpListStatus['fpClipboard'], experimental: experimental, mode: localStorage['mode'], annoyancesmode: localStorage['annoyancesmode'], antisocial: localStorage['antisocial'], whitelist: whiteList, blacklist: blackList, whitelistSession: sessionWhiteList, blackListSession: sessionBlackList, script: localStorage['script'], noscript: localStorage['noscript'], object: localStorage['object'], applet: localStorage['applet'], embed: localStorage['embed'], iframe: localStorage['iframe'], frame: localStorage['frame'], audio: localStorage['audio'], video: localStorage['video'], image: localStorage['image'], annoyances: localStorage['annoyances'], preservesamedomain: localStorage['preservesamedomain'], canvas: localStorage['canvas'], canvasfont: localStorage['canvasfont'], audioblock: localStorage['audioblock'], webgl: localStorage['webgl'], battery: localStorage['battery'], webrtcdevice: localStorage['webrtcdevice'], gamepad: localStorage['gamepad'], webvr: localStorage['webvr'], bluetooth: localStorage['bluetooth'], clientrects: localStorage['clientrects'], timezone: localStorage['timezone'], keyboard: localStorage['keyboard'], keydelta: localStorage['keydelta'], webbugs: localStorage['webbugs'], referrer: localStorage['referrer'], referrerspoofdenywhitelisted: localStorage['referrerspoofdenywhitelisted'], linktarget: localStorage['linktarget'], paranoia: localStorage['paranoia'], clipboard: localStorage['clipboard'], dataurl: localStorage['dataurl']});
-		if (typeof ITEMS[sender.tab.id] === 'undefined') {
+        sendResponse({
+            status: localStorage['enable'],
+            enable: enabled(sender.tab.url),
+            fp_canvas: fpListStatus['fpCanvas'],
+            fp_canvasfont: fpListStatus['fpCanvasFont'],
+            fp_audio: fpListStatus['fpAudio'],
+            fp_webgl: fpListStatus['fpWebGL'],
+            fp_battery: fpListStatus['fpBattery'],
+            fp_device: fpListStatus['fpDevice'],
+            fp_gamepad: fpListStatus['fpGamepad'],
+            fp_webvr: fpListStatus['fpWebVR'],
+            fp_bluetooth: fpListStatus['fpBluetooth'],
+            fp_clientrectangles: fpListStatus['fpClientRectangles'],
+            fp_clipboard: fpListStatus['fpClipboard'],
+            experimental: experimental,
+            mode: localStorage['mode'],
+            annoyancesmode: localStorage['annoyancesmode'],
+            antisocial: localStorage['antisocial'],
+            whitelist: whiteList,
+            blacklist: blackList,
+            whitelistSession: sessionWhiteList,
+            blackListSession: sessionBlackList,
+            script: localStorage['script'],
+            noscript: localStorage['noscript'],
+            object: localStorage['object'],
+            applet: localStorage['applet'],
+            embed: localStorage['embed'],
+            iframe: localStorage['iframe'],
+            frame: localStorage['frame'],
+            audio: localStorage['audio'],
+            video: localStorage['video'],
+            image: localStorage['image'],
+            annoyances: localStorage['annoyances'],
+            preservesamedomain: localStorage['preservesamedomain'],
+            canvas: localStorage['canvas'],
+            canvasfont: localStorage['canvasfont'],
+            audioblock: localStorage['audioblock'],
+            webgl: localStorage['webgl'],
+            battery: localStorage['battery'],
+            webrtcdevice: localStorage['webrtcdevice'],
+            gamepad: localStorage['gamepad'],
+            webvr: localStorage['webvr'],
+            bluetooth: localStorage['bluetooth'],
+            clientrects: localStorage['clientrects'],
+            timezone: localStorage['timezone'],
+            keyboard: localStorage['keyboard'],
+            keydelta: localStorage['keydelta'],
+            webbugs: localStorage['webbugs'],
+            referrer: localStorage['referrer'],
+            referrerspoofdenywhitelisted: localStorage['referrerspoofdenywhitelisted'],
+            linktarget: localStorage['linktarget'],
+            paranoia: localStorage['paranoia'],
+            clipboard: localStorage['clipboard'],
+            dataurl: localStorage['dataurl']
+        });
+        if (typeof ITEMS[sender.tab.id] === 'undefined') {
 			resetTabData(sender.tab.id, sender.tab.url);
 		} else {
-			if ((request.iframe != '1' && ((ITEMS[sender.tab.id]['url'] != sender.tab.url && (sender.tab.url.indexOf("#") != -1 || ITEMS[sender.tab.id]['url'].indexOf("#") != -1) && removeHash(sender.tab.url) != removeHash(ITEMS[sender.tab.id]['url'])) || (sender.tab.url.indexOf("#") == -1 && ITEMS[sender.tab.id]['url'].indexOf("#") == -1 && sender.tab.url != ITEMS[sender.tab.id]['url']) || changed) || sender.tab.url.indexOf('https://chrome.google.com/webstore') != -1)) {
-				if (changed && ITEMS[sender.tab.id]['url'] == sender.tab.url) {
+			if ((request.iframe != '1'
+                && ((ITEMS[sender.tab.id]['url'] !== sender.tab.url
+                        && (sender.tab.url.indexOf("#") !== -1 || ITEMS[sender.tab.id]['url'].indexOf("#") !== -1)
+                        && removeHash(sender.tab.url) !== removeHash(ITEMS[sender.tab.id]['url']))
+                    || (sender.tab.url.indexOf("#") === -1 && ITEMS[sender.tab.id]['url'].indexOf("#") === -1 && sender.tab.url !== ITEMS[sender.tab.id]['url'])
+                    || changed)
+                || sender.tab.url.indexOf('https://chrome.google.com/webstore') !== -1)) {
+				if (changed && ITEMS[sender.tab.id]['url'] === sender.tab.url) {
 					initCount(sender.tab.id);
 				} else {
 					resetTabData(sender.tab.id, sender.tab.url);
@@ -798,22 +930,22 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 		var cleanedUrl = removeParams(sender.tab.url);
 		for (var i in fpListStatus) {
 			if (fpListStatus[i] != '-1') {
-				if (i == 'fpCanvas') fptype = 'Canvas Fingerprint';
-				else if (i == 'fpCanvasFont') fptype = 'Canvas Font Access';
-				else if (i == 'fpAudio') fptype = 'Audio Fingerprint';
-				else if (i == 'fpWebGL') fptype = 'WebGL Fingerprint';
-				else if (i == 'fpBattery') fptype = 'Battery Fingerprint';
-				else if (i == 'fpDevice') fptype = 'Device Enumeration';
-				else if (i == 'fpGamepad') fptype = 'Gamepad Enumeration';
-				else if (i == 'fpWebVR') fptype = 'WebVR Enumeration';
-				else if (i == 'fpBluetooth') fptype = 'Bluetooth Enumeration';
-				else if (i == 'fpClientRectangles') fptype = 'Client Rectangles';
-				else if (i == 'fpClipboard') fptype = 'Clipboard Interference';
-				if (extractedDomain.substr(0,4) == 'www.') extractedDomain = extractedDomain.substr(4);
+				if (i === 'fpCanvas') fptype = 'Canvas Fingerprint';
+				else if (i === 'fpCanvasFont') fptype = 'Canvas Font Access';
+				else if (i === 'fpAudio') fptype = 'Audio Fingerprint';
+				else if (i === 'fpWebGL') fptype = 'WebGL Fingerprint';
+				else if (i === 'fpBattery') fptype = 'Battery Fingerprint';
+				else if (i === 'fpDevice') fptype = 'Device Enumeration';
+				else if (i === 'fpGamepad') fptype = 'Gamepad Enumeration';
+				else if (i === 'fpWebVR') fptype = 'WebVR Enumeration';
+				else if (i === 'fpBluetooth') fptype = 'Bluetooth Enumeration';
+				else if (i === 'fpClientRectangles') fptype = 'Client Rectangles';
+				else if (i === 'fpClipboard') fptype = 'Clipboard Interference';
+				if (extractedDomain.substr(0,4) === 'www.') extractedDomain = extractedDomain.substr(4);
 				ITEMS[sender.tab.id]['allowed'].push([cleanedUrl, fptype, extractedDomain, fpListStatus[i], false, true]);
 			}
 		}
-	} else if (request.reqtype == 'get-list') {
+	} else if (request.reqtype === 'get-list') {
 		if (typeof ITEMS[request.tid] === 'undefined') {
 			sendResponse('reload');
 			return;
@@ -821,30 +953,56 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 		var sessionlist;
 		var enableval = domainCheck(request.url);
 		var trustType = trustCheck(extractDomainFromURL(request.url));
-		if (trustType == '1') enableval = 3;
-		else if (trustType == '2') enableval = 4;
-		if (localStorage['mode'] == 'block') sessionlist = sessionWhiteList;
-		else if (localStorage['mode'] == 'allow') sessionlist = sessionBlackList;
+		if (trustType === 1) enableval = 3;
+		else if (trustType === 2) enableval = 4;
+		if (localStorage['mode'] === 'block') sessionlist = sessionWhiteList;
+		else if (localStorage['mode'] === 'allow') sessionlist = sessionBlackList;
 		var sessionfplist = false;
 		for (var i in fpListsSession) {
-			if (fpListsSession[i].length != 0) {
+			if (fpListsSession[i].length !== 0) {
 				sessionfplist = true;
 				break;
 			}
 		}
 		sendResponse({status: localStorage['enable'], enable: enableval, mode: localStorage['mode'], annoyancesmode: localStorage['annoyancesmode'], antisocial: localStorage['antisocial'], annoyances: localStorage['annoyances'], closepage: localStorage['classicoptions'], rating: localStorage['rating'], temp: sessionlist, tempfp: sessionfplist, blockeditems: ITEMS[request.tid]['blocked'], alloweditems: ITEMS[request.tid]['allowed'], domainsort: localStorage['domainsort']});
 		changed = true;
-	} else if (request.reqtype == 'update-blocked') {
+	} else if (request.reqtype === 'update-blocked') {
 		if (request.src) {
 			var cleanedUrl = removeParams(request.src);
 			if (typeof ITEMS[sender.tab.id]['blocked'] === 'undefined') ITEMS[sender.tab.id]['blocked'] = [];
-			if (!UrlInList(cleanedUrl, ITEMS[sender.tab.id]['blocked']) || request.node == 'NOSCRIPT' || request.node == 'Canvas Fingerprint' || request.node == 'Canvas Font Access' || request.node == 'Audio Fingerprint' || request.node == 'WebGL Fingerprint' || request.node == 'Battery Fingerprint' || request.node == 'Device Enumeration' || request.node == 'Gamepad Enumeration' || request.node == 'WebVR Enumeration' || request.node == 'Bluetooth Enumeration' || request.node == 'Spoofed Timezone' || request.node == 'Client Rectangles' || request.node == 'Clipboard Interference' || request.node == 'Data URL') {
+			if (!UrlInList(cleanedUrl, ITEMS[sender.tab.id]['blocked'])
+                || request.node === 'NOSCRIPT'
+                || request.node === 'Canvas Fingerprint'
+                || request.node === 'Canvas Font Access'
+                || request.node === 'Audio Fingerprint'
+                || request.node === 'WebGL Fingerprint'
+                || request.node === 'Battery Fingerprint'
+                || request.node === 'Device Enumeration'
+                || request.node === 'Gamepad Enumeration'
+                || request.node === 'WebVR Enumeration'
+                || request.node === 'Bluetooth Enumeration'
+                || request.node === 'Spoofed Timezone'
+                || request.node === 'Client Rectangles'
+                || request.node === 'Clipboard Interference'
+                || request.node === 'Data URL') {
 				var extractedDomain = extractDomainFromURL(request.src);
-				if (extractedDomain.substr(0,4) == 'www.') extractedDomain = extractedDomain.substr(4);
+				if (extractedDomain.substr(0,4) === 'www.') extractedDomain = extractedDomain.substr(4);
 				var extractedTabDomain = extractDomainFromURL(ITEMS[sender.tab.id]['url']);
-				if (request.node == 'NOSCRIPT') {
+				if (request.node === 'NOSCRIPT') {
 					ITEMS[sender.tab.id]['blocked'].push([request.src, request.node, request.src, '-1', '-1', false, false]);
-				} else if (request.node == 'Canvas Fingerprint' || request.node == 'Canvas Font Access' || request.node == 'Audio Fingerprint' || request.node == 'WebGL Fingerprint' || request.node == 'Battery Fingerprint' || request.node == 'Device Enumeration' || request.node == 'Gamepad Enumeration' || request.node == 'WebVR Enumeration' || request.node == 'Bluetooth Enumeration' || request.node == 'Spoofed Timezone' || request.node == 'Client Rectangles' || request.node == 'Clipboard Interference' || request.node == 'Data URL') {
+				} else if (request.node === 'Canvas Fingerprint'
+                    || request.node === 'Canvas Font Access'
+                    || request.node === 'Audio Fingerprint'
+                    || request.node === 'WebGL Fingerprint'
+                    || request.node === 'Battery Fingerprint'
+                    || request.node === 'Device Enumeration'
+                    || request.node === 'Gamepad Enumeration'
+                    || request.node === 'WebVR Enumeration'
+                    || request.node === 'Bluetooth Enumeration'
+                    || request.node === 'Spoofed Timezone'
+                    || request.node === 'Client Rectangles'
+                    || request.node === 'Clipboard Interference'
+                    || request.node === 'Data URL') {
 					ITEMS[sender.tab.id]['blocked'].push([request.src, request.node, extractedDomain, '-1', '-1', false, true]);
 				} else {
 					ITEMS[sender.tab.id]['blocked'].push([cleanedUrl, request.node, extractedDomain, domainCheck(request.src, 1), domainCheck(extractedTabDomain, 1), baddies(request.src, localStorage['annoyancesmode'], localStorage['antisocial'], 2), false]);
@@ -852,35 +1010,35 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 				updateCount(sender.tab.id);
 			}
 		}
-	} else if (request.reqtype == 'update-allowed') {
+	} else if (request.reqtype === 'update-allowed') {
 		if (request.src) {
 			if (typeof ITEMS[sender.tab.id]['allowed'] === 'undefined') ITEMS[sender.tab.id]['allowed'] = [];
 			var cleanedUrl = removeParams(request.src);
 			if (!UrlInList(cleanedUrl, ITEMS[sender.tab.id]['allowed'])) {
 				var extractedDomain = extractDomainFromURL(request.src);
-				if (extractedDomain.substr(0,4) == 'www.') extractedDomain = extractedDomain.substr(4);
+				if (extractedDomain.substr(0,4) === 'www.') extractedDomain = extractedDomain.substr(4);
 				ITEMS[sender.tab.id]['allowed'].push([cleanedUrl, request.node, extractedDomain, domainCheck(request.src, 1), baddies(request.src, localStorage['annoyancesmode'], localStorage['antisocial'], 2)]);
 			}
 		}
-	} else if (request.reqtype == 'save') {
+	} else if (request.reqtype === 'save') {
 		domainHandler(request.url, request.list);
 		freshSync();
 		changed = true;
-	} else if (request.reqtype == 'temp') {
+	} else if (request.reqtype === 'temp') {
 		tempHandler(request);
-	} else if (request.reqtype == 'remove-temp') {
+	} else if (request.reqtype === 'remove-temp') {
 		removeTempHandler(request);
-	} else if (request.reqtype == 'save-fp') {
+	} else if (request.reqtype === 'save-fp') {
 		fpDomainHandler(request.url, request.list, 1);
 		freshSync();
 		changed = true;
-	} else if (request.reqtype == 'temp-fp') {
+	} else if (request.reqtype === 'temp-fp') {
 		fpDomainHandler(request.url, request.list, 1, 1);
 		changed = true;
-	} else if (request.reqtype == 'remove-temp-fp') {
+	} else if (request.reqtype === 'remove-temp-fp') {
 		fpDomainHandler(request.url, request.list, -1, 1);
 		changed = true;
-	} else if (request.reqtype == 'refresh-page-icon') {
+	} else if (request.reqtype === 'refresh-page-icon') {
 		if (request.type == '0') chrome.browserAction.setIcon({path: "../img/IconAllowed.png", tabId: request.tid});
 		else if (request.type == '1') chrome.browserAction.setIcon({path: "../img/IconForbidden.png", tabId: request.tid});
 		else if (request.type == '2') chrome.browserAction.setIcon({path: "../img/IconTemp.png", tabId: request.tid});
@@ -901,12 +1059,12 @@ chrome.commands.onCommand.addListener(function (command) {
 });
 function reinitContext() {
 	chrome.contextMenus.removeAll(function() {
-		if (localStorage['showcontext'] == 'true') genContextMenu();
+		if (localStorage['showcontext'] === true) genContextMenu();
 	});
 }
 function genContextMenu() {
 	var parent = chrome.contextMenus.create({"title": "ScriptSafe", "contexts": ["page"]});
-	if (localStorage['mode'] == 'block') {
+	if (localStorage['mode'] === 'block') {
 		chrome.contextMenus.create({"title": getLocale("allow"), "parentId": parent, "onclick": function() { contextHandle('allow'); }});
 		chrome.contextMenus.create({"title": getLocale("allow")+' ('+getLocale("temp")+')', "parentId": parent, "onclick": function() { contextHandle('allowtemp'); }});
 		chrome.contextMenus.create({"title": getLocale("allowallblocked"), "parentId": parent, "onclick": tempPage});
@@ -923,32 +1081,33 @@ function genContextMenu() {
 	chrome.contextMenus.create({"title": getLocale("revoketempall"), "parentId": parent, "onclick": removeTempAll});
 	chrome.contextMenus.create({"parentId": parent, "type": "separator"});
 	chrome.contextMenus.create({"title": getLocale("options"), "parentId": parent, "onclick": function() { chrome.tabs.create({ url: chrome.extension.getURL('html/options.html')}); }});
-	if (localStorage["enable"] == "false") chrome.contextMenus.create({"title": getLocale("enabless"), "parentId": parent, "onclick": function() { localStorage["enable"] = "true"; contextHandle('toggle'); }});
-	else chrome.contextMenus.create({"title": getLocale("disable"), "parentId": parent, "onclick": function() { localStorage["enable"] = "false"; contextHandle('toggle'); }});
+	if (localStorage["enable"] === false)
+	    chrome.contextMenus.create({"title": getLocale("enabless"), "parentId": parent, "onclick": function() { localStorage["enable"] = true; contextHandle('toggle'); }});
+	else chrome.contextMenus.create({"title": getLocale("disable"), "parentId": parent, "onclick": function() { localStorage["enable"] = false; contextHandle('toggle'); }});
 }
 function contextHandle(mode) {
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-		if (tabs[0].url.indexOf('http') == 0) {
+		if (tabs[0].url.indexOf('http') === 0) {
 			var tabdomain = extractDomainFromURL(tabs[0].url);
 			var domainCheckStatus = domainCheck(tabs[0].url);
-			if (mode == 'allow') {
+			if (mode === 'allow') {
 				domainHandler(tabdomain, 2, 1);
 				domainHandler(tabdomain, 0);
-			} else if (mode == 'block') {
+			} else if (mode === 'block') {
 				domainHandler(tabdomain, 2, 1);
 				domainHandler(tabdomain, 1);
-			} else if (mode == 'allowtemp' && domainCheckStatus == '-1') tempHandler({reqtype: "temp", url: tabdomain, mode: 'block'});
-			else if (mode == 'blocktemp' && domainCheckStatus == '-1') tempHandler({reqtype: "temp", url: tabdomain, mode: 'allow'});
-			else if (mode == 'trust') topHandler(tabdomain, 0);
-			else if (mode == 'distrust') topHandler(tabdomain, 1);
-			else if (mode == 'clear') {
+			} else if (mode === 'allowtemp' && domainCheckStatus === -1) tempHandler({reqtype: "temp", url: tabdomain, mode: 'block'});
+			else if (mode === 'blocktemp' && domainCheckStatus === -1) tempHandler({reqtype: "temp", url: tabdomain, mode: 'allow'});
+			else if (mode === 'trust') topHandler(tabdomain, 0);
+			else if (mode === 'distrust') topHandler(tabdomain, 1);
+			else if (mode === 'clear') {
 				if (trustCheck(tabdomain)) domainHandler('**.'+getDomain(tabdomain), 2);
 				else {
 					domainHandler(tabdomain, 2, 1);
 					domainHandler(tabdomain, 2);
 				}
-			} else if (mode == 'toggle') reinitContext();
-			if (localStorage['refresh'] == 'true') chrome.tabs.reload(tabs[0].id);
+			} else if (mode === 'toggle') reinitContext();
+			if (localStorage['refresh'] === true) chrome.tabs.reload(tabs[0].id);
 		}
 	}); 
 }
@@ -957,46 +1116,46 @@ function tempPage() {
 		var tempMode = localStorage['mode'];
 		if (typeof ITEMS[tabs[0].id][tempMode+'ed'] === 'undefined') return;
 		var tempDomainList = [];
-		if (domainCheck(tabs[0].url, 2) == '-1') {
-			if ((tempMode == 'block' && enabled(tabs[0].url) == 'true') || (tempMode == 'allow' && enabled(tabs[0].url) == 'false'))
+		if (domainCheck(tabs[0].url, 2) === -1) {
+			if ((tempMode === 'block' && enabled(tabs[0].url) === true) || (tempMode === 'allow' && enabled(tabs[0].url) === false))
 				tempDomainList.push(extractDomainFromURL(tabs[0].url));
 		}
 		ITEMS[tabs[0].id][tempMode+'ed'].map(function(items) {
 			if (items[3] == '-1') tempDomainList.push(items[2]);
 		});
 		tempHandler({reqtype: "temp", url: tempDomainList, mode: tempMode});
-		if (localStorage['refresh'] == 'true') chrome.tabs.reload(tabs[0].id);
+		if (localStorage['refresh'] === true) chrome.tabs.reload(tabs[0].id);
 	});
 }
 function removeTempPage() {
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		var tempMode;
-		if (localStorage['mode'] == 'block') tempMode = 'allow';
+		if (localStorage['mode'] === 'block') tempMode = 'allow';
 		else tempMode = 'block';
 		if (typeof ITEMS[tabs[0].id][tempMode+'ed'] === 'undefined') return;
 		var tempDomainList = [];
-		if (domainCheck(tabs[0].url, 2) == '-1') {
-			if ((tempMode == 'block' && enabled(tabs[0].url) == 'true') || (tempMode == 'allow' && enabled(tabs[0].url) == 'false'))
+		if (domainCheck(tabs[0].url, 2) === -1) {
+			if ((tempMode === 'block' && enabled(tabs[0].url) === true) || (tempMode === 'allow' && enabled(tabs[0].url) === false))
 				tempDomainList.push(extractDomainFromURL(tabs[0].url));
 		}
 		ITEMS[tabs[0].id][tempMode+'ed'].map(function(items) {
 			tempDomainList.push(items[2]);
 		});
 		removeTempHandler({reqtype: "remove-temp", url: tempDomainList});
-		if (localStorage['refresh'] == 'true') chrome.tabs.reload(tabs[0].id);
+		if (localStorage['refresh'] === true) chrome.tabs.reload(tabs[0].id);
 	});
 }
 function removeTempAll() {
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		revokeTemp();
-		if (localStorage['refresh'] == 'true') chrome.tabs.reload(tabs[0].id);
+		if (localStorage['refresh'] === true) chrome.tabs.reload(tabs[0].id);
 	});
 }
 function freshSync(force) {
-	if (storageapi && localStorage['syncenable'] == 'true') {
+	if (storageapi && localStorage['syncenable'] === true) {
 		window.clearTimeout(synctimer);
 		if (force) {
-			localStorage['sync'] = 'true';
+			localStorage['sync'] = true;
 			var settingssync = {};
 			var simplesettings = '';
 			var newlimit = chrome.storage.sync.QUOTA_BYTES_PER_ITEM - 6 - 13;
@@ -1013,16 +1172,16 @@ function freshSync(force) {
 			var jsonstr;
 			var i = 0;
 			for (var k in localStorage) {
-				if (k != "version" && k != "sync" && k != "scriptsafe_settings" && k != "lastSync" && k != "whiteList" && k != "blackList" && k != "whiteListCount" && k != "blackListCount" && k != "whiteListCount2" && k != "blackListCount2" && k.substr(0, 10) != "whiteList_" && k.substr(0, 10) != "blackList_" && k.substr(0, 2) != "zb" && k.substr(0, 2) != "zw" && k.substr(0, 2) != "sw" && k.substr(0, 2) != "sb" && k.substr(0, 2) != "sf") {// && k.substr(0, 2) != "fp") {
+				if (k !== "version" && k !== "sync" && k !== "scriptsafe_settings" && k !== "lastSync" && k !== "whiteList" && k !== "blackList" && k !== "whiteListCount" && k !== "blackListCount" && k !== "whiteListCount2" && k !== "blackListCount2" && k.substr(0, 10) !== "whiteList_" && k.substr(0, 10) !== "blackList_" && k.substr(0, 2) !== "zb" && k.substr(0, 2) !== "zw" && k.substr(0, 2) !== "sw" && k.substr(0, 2) !== "sb" && k.substr(0, 2) !== "sf") {// && k.substr(0, 2) != "fp") {
 					simplesettings += k+"|"+localStorage[k]+"~";
 				}/* else if (k.substr(0, 2) == "fp" && k != "fpCount") {
 					fpsettings += k+"|"+localStorage[k]+"~";
 				}*/
-				if (k.substr(0, 2) == "zw") zarr['zw'].push(k);
-				else if (k.substr(0, 2) == "zb") zarr['zb'].push(k);
-				else if (k.substr(0, 2) == "sw") zarr['sw'].push(k);
-				else if (k.substr(0, 2) == "sb") zarr['sb'].push(k);
-				else if (k.substr(0, 2) == "sf") zarr['sf'].push(k);
+				if (k.substr(0, 2) === "zw") zarr['zw'].push(k);
+				else if (k.substr(0, 2) === "zb") zarr['zb'].push(k);
+				else if (k.substr(0, 2) === "sw") zarr['sw'].push(k);
+				else if (k.substr(0, 2) === "sb") zarr['sb'].push(k);
+				else if (k.substr(0, 2) === "sf") zarr['sf'].push(k);
 			}
 			settingssync['scriptsafe_settings'] = simplesettings.slice(0,-1);
 			if (zarr['zw'].length) {
@@ -1105,7 +1264,7 @@ function freshSync(force) {
 						if (chrome.extension.lastError){
 							alert(chrome.extension.lastError.message);
 						} else {
-							if (localStorage['syncnotify'] == 'true') chrome.notifications.create('syncnotify', {'type': 'basic', 'iconUrl': '../img/icon48.png', 'title': 'ScriptSafe - '+getLocale("exportsuccesstitle"), 'message': getLocale("exportsuccess")}, function(callback) { return true; } );
+							if (localStorage['syncnotify'] === true) chrome.notifications.create('syncnotify', {'type': 'basic', 'iconUrl': '../img/icon48.png', 'title': 'ScriptSafe - '+getLocale("exportsuccesstitle"), 'message': getLocale("exportsuccess")}, function(callback) { return true; } );
 						}
 					});
 				});
@@ -1121,42 +1280,46 @@ function freshSync(force) {
 function syncQueue() {
 	freshSync(true);
 }
+/**
+ * @param {number} mode
+ * @returns {boolean}
+ */
 function importSyncHandle(mode) {
 	if (storageapi) {
-		if (mode == '1' || localStorage['syncenable'] == 'true' || localStorage['sync'] == 'false') {
+		if (mode === 1 || localStorage['syncenable'] === true || localStorage['sync'] === false) {
 			window.clearTimeout(synctimer);
 			chrome.storage.sync.get(null, function(changes) {
 				console.log('Checking sync data...');
 				console.log(changes);
 				if (typeof changes['lastSync'] !== 'undefined') {
-					if ((mode == '0' && changes['lastSync'] > localStorage['lastSync']) || (mode == '1' && changes['lastSync'] >= localStorage['lastSync'])) {
+					if ((mode === 0 && changes['lastSync'] > localStorage['lastSync']) || (mode === 1 && changes['lastSync'] >= localStorage['lastSync'])) {
 						if (confirm(getLocale("syncdetect"))) {
-							localStorage['syncenable'] = 'true';
-							localStorage['sync'] = 'true';
+							localStorage['syncenable'] = true;
+							localStorage['sync'] = true;
 							importSync(changes);
-							if (mode == '1') window.setTimeout(function() { window.clearTimeout(synctimer); }, 5000);
-							if (localStorage['syncfromnotify'] == 'true') chrome.notifications.create('syncnotify', {'type': 'basic', 'iconUrl': '../img/icon48.png', 'title': 'ScriptSafe - '+getLocale("importsuccesstitle"), 'message': getLocale("importsuccess")}, function(callback) { updated = true; return true; });
+							if (mode === 1) window.setTimeout(function() { window.clearTimeout(synctimer); }, 5000);
+							if (localStorage['syncfromnotify'] === true) chrome.notifications.create('syncnotify', {'type': 'basic', 'iconUrl': '../img/icon48.png', 'title': 'ScriptSafe - '+getLocale("importsuccesstitle"), 'message': getLocale("importsuccess")}, function(callback) { updated = true; return true; });
 							return true;
 						} else {
-							if (mode != '1') {
-								localStorage['syncenable'] = 'false';
+							if (mode !== 1) {
+								localStorage['syncenable'] = false;
 								alert(getLocale("syncdisabled"));
-								localStorage['sync'] = 'true';
+								localStorage['sync'] = true;
 							}
 							return false;
 						}
 					}
 				}
-				if (mode == '1' || (localStorage['sync'] == 'false' && mode == '0')) {
+				if (mode === 1 || (localStorage['sync'] === false && mode === 0)) {
 					if (confirm(getLocale("firstsync"))) {
-						localStorage['syncenable'] = 'true';
-						localStorage['sync'] = 'true';
-						if (mode == '1') freshSync();
+						localStorage['syncenable'] = true;
+						localStorage['sync'] = true;
+						if (mode === 1) freshSync();
 						else freshSync(true);
 						return true;
 					} else {
-						localStorage['syncenable'] = 'false';
-						localStorage['sync'] = 'true';
+						localStorage['syncenable'] = false;
+						localStorage['sync'] = true;
 						alert(getLocale("disabledsync"));
 						updated = true;
 						return false;
@@ -1166,22 +1329,22 @@ function importSyncHandle(mode) {
 		}
 	} else {
 		alert(getLocale("syncnotsupported"));
-		localStorage['sync'] = 'true';
+		localStorage['sync'] = true;
 		return false;
 	}
 }
 function importSync(changes) {
 	for (var key in changes) {
 		console.log('Saving from sync to local: '+key);
-		if (key != 'scriptsafe_settings') {
+		if (key !== 'scriptsafe_settings') {
 			localStorage[key] = changes[key];
-		} else if (key == 'scriptsafe_settings') {
+		} else if (key === 'scriptsafe_settings') {
 			var settings = changes[key].split("~");
 			if (settings.length > 0) {
 				$.each(settings, function(i, v) {
-					if ($.trim(v) != "") {
+					if ($.trim(v) !== "") {
 						var settingentry = $.trim(v).split("|");
-						if ($.trim(settingentry[1]) != '') {
+						if ($.trim(settingentry[1]) !== '') {
 							localStorage[$.trim(settingentry[0])] = $.trim(settingentry[1]);
 						}
 					}
@@ -1202,21 +1365,21 @@ function listsSync() {
 		var listerror = false;
 		for (var i = 0; i < localStorage['fpCount']; i++) {
 			if (localStorage['sf'+i]) {
-				if (localStorage['sf'+i].substr(0, 13) == localStorage['lastSync']) concatlist += localStorage['sf'+i].substr(13);
+				if (localStorage['sf'+i].substr(0, 13) === localStorage['lastSync']) concatlist += localStorage['sf'+i].substr(13);
 				else listerror = true;
 				delete localStorage['sf'+i];
 			}
 		}
 		if (!listerror) {
-			if (concatlist != '') {
+			if (concatlist !== '') {
 				concatlist = LZString.decompressFromBase64(concatlist);
 				var settings = concatlist.split("~");
 				console.log(settings);
 				if (settings.length > 0) {
 					$.each(settings, function(i, v) {
-						if ($.trim(v) != "") {
+						if ($.trim(v) !== "") {
 							var settingentry = $.trim(v).split("|");
-							if ($.trim(settingentry[1]) != '') {
+							if ($.trim(settingentry[1]) !== '') {
 								localStorage[$.trim(settingentry[0])] = $.trim(settingentry[1]);
 							}
 						}
@@ -1225,7 +1388,7 @@ function listsSync() {
 			}
 		} else {
 			alert('Incomplete fingerprint whitelist data was detected. Very large lists are known to cause issues with syncing.\r\nAs a safety precaution, your fingerprint whitelist has not been updated and syncing has been disabled on this device to prevent overwriting data on other devices.\r\nPlease consider manually exporting your latest settings and importing it into your other devices from the Options page.');
-			localStorage['syncenable'] = 'false';
+			localStorage['syncenable'] = false;
 			console.log('Incomplete fingerprint whitelist data detected: import cancelled');
 		}
 		delete localStorage['fpCount'];
@@ -1244,11 +1407,11 @@ function listsSyncParse(type) {
 		else counttype = type+'Count';
 		console.log('Processing '+counttype+'...'+localStorage[counttype]);
 		concatlist = '';
-		if (localStorage[counttype] != '0') {
+		if (localStorage[counttype] !== '0') {
 			for (var i = 0; i < localStorage[counttype]; i++) {
-				if (counttype == type+'Count2') {
+				if (counttype === type+'Count2') {
 					if (localStorage['s'+lsName+i]) {
-						if (localStorage['s'+lsName+i].substr(0, 13) == localStorage['lastSync']) concatlist += localStorage['s'+lsName+i].substr(13);
+						if (localStorage['s'+lsName+i].substr(0, 13) === localStorage['lastSync']) concatlist += localStorage['s'+lsName+i].substr(13);
 						else {
 							listerror = true;
 						}
@@ -1256,7 +1419,7 @@ function listsSyncParse(type) {
 					} else {
 						listerror = true;
 					}
-				} else if (counttype == type+'Count') {
+				} else if (counttype === type+'Count') {
 					if (localStorage['z'+lsName+i]) {
 						concatlist += localStorage['z'+lsName+i];
 						delete localStorage['z'+lsName+i];
@@ -1266,18 +1429,18 @@ function listsSyncParse(type) {
 				}
 			}
 			if (!listerror) {
-				if (counttype == type+'Count2') concatlist = LZString.decompressFromBase64(concatlist);
+				if (counttype === type+'Count2') concatlist = LZString.decompressFromBase64(concatlist);
 				concatlistarr = concatlist.split(",");
 				console.log(concatlistarr);
 			}
 		}
 		if (!listerror) {
-			if (concatlist == '' || concatlistarr.length == 0) localStorage[type+''] = JSON.stringify([]);
+			if (concatlist === '' || concatlistarr.length === 0) localStorage[type+''] = JSON.stringify([]);
 			else localStorage[type+''] = JSON.stringify(concatlistarr);
 			console.log('Sync data verified and complete: '+type+' was imported.');
 		} else {
 			alert('Incomplete '+type.toLowerCase()+' data was detected. Very large lists are known to cause issues with syncing.\r\nAs a safety precaution, your '+type.toLowerCase()+' has not been updated and syncing has been disabled on this device to prevent overwriting data on other devices.\r\nPlease consider manually exporting your latest settings and importing it into your other devices from the Options page.');
-			localStorage['syncenable'] = 'false';
+			localStorage['syncenable'] = false;
 			console.log('Incomplete '+type.toLowerCase()+' data detected: import cancelled');
 		}
 		if (optionExists(type+'Count2')) delete localStorage[type+'Count2'];
@@ -1298,14 +1461,14 @@ function init() {
 	initWebRTC();
 	cacheLists();
 	cacheFpLists();
-	if (localStorage['showcontext'] == 'true') genContextMenu();
+	if (localStorage['showcontext'] === true) genContextMenu();
 }
 function cacheLists() {
 	var tempList = JSON.parse(localStorage['whiteList']);
 	var tempDomain = [];
 	var tempWildDomain = [];
 	tempList.map(function(domain) {
-		if (domain.substr(0,3) == '**.') tempWildDomain.push(domain);
+		if (domain.substr(0,3) === '**.') tempWildDomain.push(domain);
 		tempDomain.push(domain);
 	});
 	tempDomain = tempDomain.sort();
@@ -1316,7 +1479,7 @@ function cacheLists() {
 	tempDomain = [];
 	tempWildDomain = [];
 	tempList.map(function(domain) {
-		if (domain.substr(0,3) == '**.') tempWildDomain.push(domain);
+		if (domain.substr(0,3) === '**.') tempWildDomain.push(domain);
 		tempDomain.push(domain);
 	});
 	tempDomain = tempDomain.sort();
@@ -1335,6 +1498,10 @@ function cacheFpLists() {
 		fpLists[fpTypes[i]] = tempDomain;
 	}
 }
+/**
+ * @param lang
+ * @param {number} mode
+ */
 function initLang(lang, mode) {
 	var url = chrome.extension.getURL('_locales/' + lang + '/messages.json');
 	$.ajax({
@@ -1343,12 +1510,12 @@ function initLang(lang, mode) {
 		async: true,
 		success: function(data) {
 			locale = data;
-			if (mode == '1') postLangLoad();
+			if (mode === 1) postLangLoad();
 			else reinitContext();
 		},
 		error: function(){
 			locale = false;
-			if (mode == '1') postLangLoad();
+			if (mode === 1) postLangLoad();
 			else reinitContext();
 		}
 	});
@@ -1361,13 +1528,10 @@ function getLocale(str) {
 		return chrome.i18n.getMessage(str);
 	}
 }
-function getLangs() {
-	return langs;
-}
 var uiLang = chrome.i18n.getUILanguage().replace(/-/g, '_');
 if (!optionExists("locale")) {
 	localStorage['locale'] = 'en_US';
-	if (uiLang != 'en' && uiLang != 'en_GB' && uiLang != 'en_US') {
+	if (uiLang !== 'en' && uiLang !== 'en_GB' && uiLang !== 'en_US') {
 		if (typeof langs[uiLang] !== 'undefined') {
 			if (confirm('ScriptSafe detected that your browser is currently set to '+langs[uiLang]+'.\r\nWould you like to use ScriptSafe in '+langs[uiLang]+'?\r\nIf you click on "Cancel", English (US) will be set.')) {
 				localStorage['locale'] = uiLang;
@@ -1381,7 +1545,7 @@ if (!optionExists("locale")) {
 }
 initLang(localStorage['locale'], 1);
 function postLangLoad() {
-	if (!optionExists("version") || localStorage["version"] != version) {
+	if (!optionExists("version") || localStorage["version"] !== version) {
 		// One-time update existing whitelist/blacklist for new regex support introduced in v1.0.7.0
 		if (!optionExists("tempregexflag")) {
 			if (optionExists("version")) {
@@ -1389,7 +1553,7 @@ function postLangLoad() {
 				var tempNewList = [];
 				if (tempList.length) {
 					tempList.map(function(domain) {
-						if (domain.substr(0,2) == '*.') tempNewList.push('*'+domain);
+						if (domain.substr(0,2) === '*.') tempNewList.push('*'+domain);
 						else tempNewList.push(domain);
 					});
 					localStorage['blackList'] = JSON.stringify(tempNewList);
@@ -1398,16 +1562,16 @@ function postLangLoad() {
 				if (tempList.length) {
 					tempNewList = [];
 					tempList.map(function(domain) {
-						if (domain.substr(0,2) == '*.') tempNewList.push('*'+domain);
+						if (domain.substr(0,2) === '*.') tempNewList.push('*'+domain);
 						else tempNewList.push(domain);
 					});
 					localStorage['whiteList'] = JSON.stringify(tempNewList);
 				}
 			}
-			localStorage['tempregexflag'] = "true";
+			localStorage['tempregexflag'] = true;
 			syncQueue();
 		}
-		if (localStorage["updatenotify"] == "true") {
+		if (localStorage["updatenotify"] === true) {
 			chrome.tabs.create({ url: chrome.extension.getURL('html/updated.html')});
 		}
 		localStorage["version"] = version;
@@ -1415,7 +1579,7 @@ function postLangLoad() {
 	setDefaultOptions();
 	if (storageapi) {
 		chrome.storage.onChanged.addListener(function(changes, namespace) {
-			if (namespace == 'sync' && localStorage['syncenable'] == 'true') {
+			if (namespace === 'sync' && localStorage['syncenable'] === true) {
 				console.log('Something changed!');
 				console.log(changes);
 				if (typeof changes['lastSync'] !== 'undefined') {
@@ -1423,7 +1587,7 @@ function postLangLoad() {
 						console.log('Last sync is newer, so import new data');
 						chrome.storage.sync.get(null, function(changes) {
 							importSync(changes);
-							if (localStorage['syncfromnotify'] == 'true') chrome.notifications.create('syncnotify', {'type': 'basic', 'iconUrl': '../img/icon48.png', 'title': 'ScriptSafe - '+getLocale("importsuccesstitle"), 'message': getLocale("importsuccess")}, function(callback) { updated = true; return true; });
+							if (localStorage['syncfromnotify'] === true) chrome.notifications.create('syncnotify', {'type': 'basic', 'iconUrl': '../img/icon48.png', 'title': 'ScriptSafe - '+getLocale("importsuccesstitle"), 'message': getLocale("importsuccess")}, function(callback) { updated = true; return true; });
 						});
 					}
 				}
