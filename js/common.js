@@ -96,13 +96,19 @@ function getDomain(url, type) {
 	}
 	return url;
 }
+/**
+ *
+ * @param needle
+ * @param haystack
+ * @returns {boolean}
+ */
 function in_array(needle, haystack) {
 	if (!haystack || !needle) return false;
 	if (needle.indexOf('www.') === 0) needle = needle.substring(4);
-	if (binarySearch(haystack, needle) !== -1) return '1';
+	if (binarySearch(haystack, needle) !== -1) return true;
 	for (var i in haystack) {
 		if (haystack[i].indexOf("*") === -1 && haystack[i].indexOf("?") === -1) continue;
-		if (new RegExp('^(?:'+haystack[i].replace(/\./g, '\\.').replace(/^\[/, '\\[').replace(/\]$/, '\\]').replace(/\?/g, '.').replace(/^\*\*\\./, '(?:.+\\.|^)').replace(/\*/g, '[^.]+')+')$').test(needle)) return '1';
+		if (new RegExp('^(?:'+haystack[i].replace(/\./g, '\\.').replace(/^\[/, '\\[').replace(/\]$/, '\\]').replace(/\?/g, '.').replace(/^\*\*\\./, '(?:.+\\.|^)').replace(/\*/g, '[^.]+')+')$').test(needle)) return true;
 	}
 	return false;
 }

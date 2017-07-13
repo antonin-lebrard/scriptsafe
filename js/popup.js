@@ -110,21 +110,21 @@ function init() {
 							for (var i=0;i<responseBlockedCount;i++) {
 								var itemdomain = response.blockeditems[i][2];
 								var fpitemdomain = response.blockeditems[i][2];
-								if (response.blockeditems[i][1] == 'NOSCRIPT') itemdomain = 'no.script';
-								else if (response.blockeditems[i][1] == 'WEBBUG') itemdomain = 'web.bug';
-								else if (response.blockeditems[i][1] == 'Canvas Fingerprint') itemdomain = 'canvas.fingerprint';
-								else if (response.blockeditems[i][1] == 'Canvas Font Access') itemdomain = 'canvas.font.access';
-								else if (response.blockeditems[i][1] == 'Audio Fingerprint') itemdomain = 'audio.fingerprint';
-								else if (response.blockeditems[i][1] == 'WebGL Fingerprint') itemdomain = 'webgl.fingerprint';
-								else if (response.blockeditems[i][1] == 'Battery Fingerprint') itemdomain = 'battery.fingerprint';
-								else if (response.blockeditems[i][1] == 'Device Enumeration') itemdomain = 'device.enumeration';
-								else if (response.blockeditems[i][1] == 'Gamepad Enumeration') itemdomain = 'gamepad.enumeration';
-								else if (response.blockeditems[i][1] == 'WebVR Enumeration') itemdomain = 'webvr.enumeration';
-								else if (response.blockeditems[i][1] == 'Bluetooth Enumeration') itemdomain = 'bluetooth.enumeration';
-								else if (response.blockeditems[i][1] == 'Spoofed Timezone') itemdomain = 'spoofed.timezone';
-								else if (response.blockeditems[i][1] == 'Client Rectangles') itemdomain = 'client.rectangles';
-								else if (response.blockeditems[i][1] == 'Clipboard Interference') itemdomain = 'clipboard.interference';
-								else if (response.blockeditems[i][1] == 'Data URL') itemdomain = 'data.url';
+								if (response.blockeditems[i][1] === 'NOSCRIPT') itemdomain = 'no.script';
+								else if (response.blockeditems[i][1] === 'WEBBUG') itemdomain = 'web.bug';
+								else if (response.blockeditems[i][1] === 'Canvas Fingerprint') itemdomain = 'canvas.fingerprint';
+								else if (response.blockeditems[i][1] === 'Canvas Font Access') itemdomain = 'canvas.font.access';
+								else if (response.blockeditems[i][1] === 'Audio Fingerprint') itemdomain = 'audio.fingerprint';
+								else if (response.blockeditems[i][1] === 'WebGL Fingerprint') itemdomain = 'webgl.fingerprint';
+								else if (response.blockeditems[i][1] === 'Battery Fingerprint') itemdomain = 'battery.fingerprint';
+								else if (response.blockeditems[i][1] === 'Device Enumeration') itemdomain = 'device.enumeration';
+								else if (response.blockeditems[i][1] === 'Gamepad Enumeration') itemdomain = 'gamepad.enumeration';
+								else if (response.blockeditems[i][1] === 'WebVR Enumeration') itemdomain = 'webvr.enumeration';
+								else if (response.blockeditems[i][1] === 'Bluetooth Enumeration') itemdomain = 'bluetooth.enumeration';
+								else if (response.blockeditems[i][1] === 'Spoofed Timezone') itemdomain = 'spoofed.timezone';
+								else if (response.blockeditems[i][1] === 'Client Rectangles') itemdomain = 'client.rectangles';
+								else if (response.blockeditems[i][1] === 'Clipboard Interference') itemdomain = 'clipboard.interference';
+								else if (response.blockeditems[i][1] === 'Data URL') itemdomain = 'data.url';
 								if (itemdomain) {
 									var baddiesstatus = response.blockeditems[i][5];
 									var parentstatus = response.blockeditems[i][4];
@@ -207,48 +207,49 @@ function init() {
 									}
 								}
 							}
-							$("#blocked").append($('.thirditem:has([title="Ignored allowed domain due to unlisted tab domain"])'));
-							$("#blocked").append($('.thirditem:has([title="Unwanted Content Provider"])'));
-							$("#blocked").append($('.thirditem:has([title="Antisocial"])'));
-							$("#blocked").append($('.thirditem:not(*>:has(.choices))'));
-							$("#blocked").append($("#blocked [rel='x_no_script']"));
-							$("#blocked").append($("#blocked [rel='x_web_bug']"));
-							$("#blocked").append($("#blocked [rel='x_data_url']"));
-							$("#blocked").append($("#blocked [rel='x_spoofed_timezone']"));
-							$("#blocked").append($("#blocked [rel='x_canvas_fingerprint']"));
-							$("#blocked").append($("#blocked [rel='x_canvas_font_access']"));
-							$("#blocked").append($("#blocked [rel='x_battery_fingerprint']"));
-							$("#blocked").append($("#blocked [rel='x_audio_fingerprint']"));
-							$("#blocked").append($("#blocked [rel='x_webgl_fingerprint']"));
-							$("#blocked").append($("#blocked [rel='x_device_enumeration']"));
-							$("#blocked").append($("#blocked [rel='x_gamepad_enumeration']"));
-							$("#blocked").append($("#blocked [rel='x_webvr_enumeration']"));
-							$("#blocked").append($("#blocked [rel='x_bluetooth_enumeration']"));
-							$("#blocked").append($("#blocked [rel='x_client_rectangles']"));
-							$("#blocked").append($("#blocked [rel='x_clipboard_interference']"));
-							$("#blocked").prepend($("#blocked [data-domain='"+tabdomainroot+"'][data-baddie='false']"));
-							$("#blocked [rel='x_"+tabdomainfriendly+"']").children().first().css("font-weight", "bold");
-							$("#blocked [rel='fp_"+tabdomainfriendly+"']").children().css("font-weight", "bold");
-							$("#blocked").prepend($("#blocked [rel='x_"+tabdomainfriendly+"']"));
+							var blockedEl = $("#blocked");
+							blockedEl.append($('.thirditem:has([title="Ignored allowed domain due to unlisted tab domain"])'));
+                            blockedEl.append($('.thirditem:has([title="Unwanted Content Provider"])'));
+							blockedEl.append($('.thirditem:has([title="Antisocial"])'));
+							blockedEl.append($('.thirditem:not(*>:has(.choices))'));
+							blockedEl.append(blockedEl.find("[rel='x_no_script']"));
+							blockedEl.append(blockedEl.find("[rel='x_web_bug']"));
+							blockedEl.append(blockedEl.find("[rel='x_data_url']"));
+							blockedEl.append(blockedEl.find("[rel='x_spoofed_timezone']"));
+							blockedEl.append(blockedEl.find("[rel='x_canvas_fingerprint']"));
+							blockedEl.append(blockedEl.find("[rel='x_canvas_font_access']"));
+							blockedEl.append(blockedEl.find("[rel='x_battery_fingerprint']"));
+							blockedEl.append(blockedEl.find("[rel='x_audio_fingerprint']"));
+							blockedEl.append(blockedEl.find("[rel='x_webgl_fingerprint']"));
+							blockedEl.append(blockedEl.find("[rel='x_device_enumeration']"));
+							blockedEl.append(blockedEl.find("[rel='x_gamepad_enumeration']"));
+							blockedEl.append(blockedEl.find("[rel='x_webvr_enumeration']"));
+							blockedEl.append(blockedEl.find("[rel='x_bluetooth_enumeration']"));
+							blockedEl.append(blockedEl.find("[rel='x_client_rectangles']"));
+							blockedEl.append(blockedEl.find("[rel='x_clipboard_interference']"));
+							blockedEl.prepend(blockedEl.find("[data-domain='"+tabdomainroot+"'][data-baddie='false']"));
+                            blockedEl.find("[rel='x_"+tabdomainfriendly+"']").children().first().css("font-weight", "bold");
+                            blockedEl.find("[rel='fp_"+tabdomainfriendly+"']").children().css("font-weight", "bold");
+                            blockedEl.prepend(blockedEl.find("[rel='x_"+tabdomainfriendly+"']"));
 						}
-						if (responseAllowedCount != 0) {
+						if (responseAllowedCount !== 0) {
 							if (response.domainsort == 'true') response.alloweditems = bkg.domainSort(response.alloweditems);
 							else response.alloweditems.sort();
 							$(".thirds").parent().parent().append("<tr><td class='bolded' style='height: 14px;'><span class='allowed'>"+bkg.getLocale("alloweditems")+"</span></td></tr><tr><td class='thirds' id='allowed'></td></tr>");
 							for (var i=0;i<responseAllowedCount;i++) {
 								var itemdomain = response.alloweditems[i][2];
 								var fpitemdomain = response.alloweditems[i][2];
-								if (response.alloweditems[i][1] == 'Canvas Fingerprint') itemdomain = 'canvas.fingerprint';
-								else if (response.alloweditems[i][1] == 'Canvas Font Access') itemdomain = 'canvas.font.access';
-								else if (response.alloweditems[i][1] == 'Audio Fingerprint') itemdomain = 'audio.fingerprint';
-								else if (response.alloweditems[i][1] == 'WebGL Fingerprint') itemdomain = 'webgl.fingerprint';
-								else if (response.alloweditems[i][1] == 'Battery Fingerprint') itemdomain = 'battery.fingerprint';
-								else if (response.alloweditems[i][1] == 'Device Enumeration') itemdomain = 'device.enumeration';
-								else if (response.alloweditems[i][1] == 'Gamepad Enumeration') itemdomain = 'gamepad.enumeration';
-								else if (response.alloweditems[i][1] == 'WebVR Enumeration') itemdomain = 'webvr.enumeration';
-								else if (response.alloweditems[i][1] == 'Bluetooth Enumeration') itemdomain = 'bluetooth.enumeration';
-								else if (response.alloweditems[i][1] == 'Client Rectangles') itemdomain = 'client.rectangles';
-								else if (response.alloweditems[i][1] == 'Clipboard Interference') itemdomain = 'clipboard.interference';
+								if (response.alloweditems[i][1] === 'Canvas Fingerprint') itemdomain = 'canvas.fingerprint';
+								else if (response.alloweditems[i][1] === 'Canvas Font Access') itemdomain = 'canvas.font.access';
+								else if (response.alloweditems[i][1] === 'Audio Fingerprint') itemdomain = 'audio.fingerprint';
+								else if (response.alloweditems[i][1] === 'WebGL Fingerprint') itemdomain = 'webgl.fingerprint';
+								else if (response.alloweditems[i][1] === 'Battery Fingerprint') itemdomain = 'battery.fingerprint';
+								else if (response.alloweditems[i][1] === 'Device Enumeration') itemdomain = 'device.enumeration';
+								else if (response.alloweditems[i][1] === 'Gamepad Enumeration') itemdomain = 'gamepad.enumeration';
+								else if (response.alloweditems[i][1] === 'WebVR Enumeration') itemdomain = 'webvr.enumeration';
+								else if (response.alloweditems[i][1] === 'Bluetooth Enumeration') itemdomain = 'bluetooth.enumeration';
+								else if (response.alloweditems[i][1] === 'Client Rectangles') itemdomain = 'client.rectangles';
+								else if (response.alloweditems[i][1] === 'Clipboard Interference') itemdomain = 'clipboard.interference';
 								if (itemdomain) {
 									allowed.push(itemdomain);
 									var itemdomainfriendly = itemdomain.replace(/[.\[\]:]/g,"_");
@@ -314,21 +315,22 @@ function init() {
 									}
 								}
 							}
-							$("#allowed").prepend($("#allowed [data-domain='"+tabdomainroot+"'][data-baddie='false']"));
-							$("#allowed [rel='x_"+tabdomainfriendly+"']").children().first().css("font-weight", "bold");
-							$("#allowed [rel='fp_"+tabdomainfriendly+"']").children().css("font-weight", "bold");
-							$("#allowed").prepend($("#allowed [rel='x_"+tabdomainfriendly+"']"));
-							$("#allowed").append($("#allowed [rel='x_canvas_fingerprint']"));
-							$("#allowed").append($("#allowed [rel='x_canvas_font_access']"));
-							$("#allowed").append($("#allowed [rel='x_battery_fingerprint']"));
-							$("#allowed").append($("#allowed [rel='x_audio_fingerprint']"));
-							$("#allowed").append($("#allowed [rel='x_webgl_fingerprint']"));
-							$("#allowed").append($("#allowed [rel='x_device_enumeration']"));
-							$("#allowed").append($("#allowed [rel='x_gamepad_enumeration']"));
-							$("#allowed").append($("#allowed [rel='x_webvr_enumeration']"));
-							$("#allowed").append($("#allowed [rel='x_bluetooth_enumeration']"));
-							$("#allowed").append($("#allowed [rel='x_client_rectangles']"));
-							$("#allowed").append($("#allowed [rel='x_clipboard_interference']"));
+							var allowedEl = $("#allowed");
+                            allowedEl.prepend(allowedEl.find("[data-domain='"+tabdomainroot+"'][data-baddie='false']"));
+							allowedEl.find("[rel='x_"+tabdomainfriendly+"']").children().first().css("font-weight", "bold");
+							allowedEl.find("[rel='fp_"+tabdomainfriendly+"']").children().css("font-weight", "bold");
+							allowedEl.prepend(allowedEl.find("[rel='x_"+tabdomainfriendly+"']"));
+							allowedEl.append(allowedEl.find("[rel='x_canvas_fingerprint']"));
+							allowedEl.append(allowedEl.find("[rel='x_canvas_font_access']"));
+							allowedEl.append(allowedEl.find("[rel='x_battery_fingerprint']"));
+							allowedEl.append(allowedEl.find("[rel='x_audio_fingerprint']"));
+							allowedEl.append(allowedEl.find("[rel='x_webgl_fingerprint']"));
+							allowedEl.append(allowedEl.find("[rel='x_device_enumeration']"));
+							allowedEl.append(allowedEl.find("[rel='x_gamepad_enumeration']"));
+							allowedEl.append(allowedEl.find("[rel='x_webvr_enumeration']"));
+							allowedEl.append(allowedEl.find("[rel='x_bluetooth_enumeration']"));
+							allowedEl.append(allowedEl.find("[rel='x_client_rectangles']"));
+							allowedEl.append(allowedEl.find("[rel='x_clipboard_interference']"));
 						}
 						var blockedCount = blocked.length;
 						var allowedCount = allowed.length;
@@ -427,11 +429,11 @@ function init() {
 function bulk(el) {
 	var urlarray;
 	if (el.hasClass("prevoke")) {
-		if (mode == 'block') urlarray = allowed;
+		if (mode === 'block') urlarray = allowed;
 		else urlarray = blocked;
 		chrome.extension.sendRequest({reqtype: "remove-temp", url: urlarray});
 	} else {
-		if (mode == 'block') urlarray = blocked;
+		if (mode === 'block') urlarray = blocked;
 		else urlarray = allowed;
 		chrome.extension.sendRequest({reqtype: "temp", url: urlarray, mode: mode});
 	}
@@ -445,17 +447,17 @@ function remove(url, el, type) {
 	if (el.parent().hasClass("fpchoices")) {
 		var fpType = el.parent().attr("sn_list");
 		var fpList;
-		if (fpType == 'canvas.fingerprint') fpList = 'fpCanvas';
-		else if (fpType == 'canvas.font.access') fpList = 'fpCanvasFont';
-		else if (fpType == 'audio.fingerprint') fpList = 'fpAudio';
-		else if (fpType == 'webgl.fingerprint') fpList = 'fpWebGL';
-		else if (fpType == 'battery.fingerprint') fpList = 'fpBattery';
-		else if (fpType == 'device.enumeration') fpList = 'fpDevice';
-		else if (fpType == 'gamepad.enumeration') fpList = 'fpGamepad';
-		else if (fpType == 'webvr.enumeration') fpList = 'fpWebVR';
-		else if (fpType == 'bluetooth.enumeration') fpList = 'fpBluetooth';
-		else if (fpType == 'client.rectangles') fpList = 'fpClientRectangles';
-		else if (fpType == 'clipboard.interference') fpList = 'fpClipboard';
+		if (fpType === 'canvas.fingerprint') fpList = 'fpCanvas';
+		else if (fpType === 'canvas.font.access') fpList = 'fpCanvasFont';
+		else if (fpType === 'audio.fingerprint') fpList = 'fpAudio';
+		else if (fpType === 'webgl.fingerprint') fpList = 'fpWebGL';
+		else if (fpType === 'battery.fingerprint') fpList = 'fpBattery';
+		else if (fpType === 'device.enumeration') fpList = 'fpDevice';
+		else if (fpType === 'gamepad.enumeration') fpList = 'fpGamepad';
+		else if (fpType === 'webvr.enumeration') fpList = 'fpWebVR';
+		else if (fpType === 'bluetooth.enumeration') fpList = 'fpBluetooth';
+		else if (fpType === 'client.rectangles') fpList = 'fpClientRectangles';
+		else if (fpType === 'clipboard.interference') fpList = 'fpClipboard';
 		bkg.fpDomainHandler('**.'+bkg.getDomain(url), fpList, -1);
 		bkg.fpDomainHandler(url, fpList, -1);
 	} else {
@@ -486,7 +488,7 @@ function remove(url, el, type) {
 			$(".thirditem[rel='x_"+urlfriendly+"'] .x_bypass").show();
 		} else if (type == '1') {
 			if (!el.parent().hasClass("fpchoices")) {
-				if (url == tabdomain) {
+				if (url === tabdomain) {
 					$(".pallow,.pdeny,.pbypass,.ptrust").removeClass("selected");
 					$(".pbypass").show();
 					$('.pclear').hide();
@@ -494,7 +496,7 @@ function remove(url, el, type) {
 			}
 			$(".x_bypass", el.parent()).show();
 			el.parent().children().removeClass("selected");
-			if ($(".x_blacklist", el.parent()).text() == 'Unwanted') $(".x_blacklist", el.parent()).addClass("selected");
+			if ($(".x_blacklist", el.parent()).text() === 'Unwanted') $(".x_blacklist", el.parent()).addClass("selected");
 		}
 	}
 }
@@ -505,17 +507,17 @@ function save(url, el, type) {
 	if (el.parent().hasClass("fpchoices")) {
 		var fpType = el.parent().attr("sn_list");
 		var fpList;
-		if (fpType == 'canvas.fingerprint') fpList = 'fpCanvas';
-		else if (fpType == 'canvas.font.access') fpList = 'fpCanvasFont';
-		else if (fpType == 'audio.fingerprint') fpList = 'fpAudio';
-		else if (fpType == 'webgl.fingerprint') fpList = 'fpWebGL';
-		else if (fpType == 'battery.fingerprint') fpList = 'fpBattery';
-		else if (fpType == 'device.enumeration') fpList = 'fpDevice';
-		else if (fpType == 'gamepad.enumeration') fpList = 'fpGamepad';
-		else if (fpType == 'webvr.enumeration') fpList = 'fpWebVR';
-		else if (fpType == 'bluetooth.enumeration') fpList = 'fpBluetooth';
-		else if (fpType == 'client.rectangles') fpList = 'fpClientRectangles';
-		else if (fpType == 'clipboard.interference') fpList = 'fpClipboard';
+		if (fpType === 'canvas.fingerprint') fpList = 'fpCanvas';
+		else if (fpType === 'canvas.font.access') fpList = 'fpCanvasFont';
+		else if (fpType === 'audio.fingerprint') fpList = 'fpAudio';
+		else if (fpType === 'webgl.fingerprint') fpList = 'fpWebGL';
+		else if (fpType === 'battery.fingerprint') fpList = 'fpBattery';
+		else if (fpType === 'device.enumeration') fpList = 'fpDevice';
+		else if (fpType === 'gamepad.enumeration') fpList = 'fpGamepad';
+		else if (fpType === 'webvr.enumeration') fpList = 'fpWebVR';
+		else if (fpType === 'bluetooth.enumeration') fpList = 'fpBluetooth';
+		else if (fpType === 'client.rectangles') fpList = 'fpClientRectangles';
+		else if (fpType === 'clipboard.interference') fpList = 'fpClipboard';
 		if (val < 2) {
 			bkg.fpDomainHandler(url, fpList, -1, 1);
 			chrome.extension.sendRequest({reqtype: "save-fp", url: url, list: fpList});
@@ -528,7 +530,7 @@ function save(url, el, type) {
 		}
 	} else {
 		if (val < 2) {
-			bkg.domainHandler(url, '2', '1');
+			bkg.domainHandler(url, 2, 1);
 			chrome.extension.sendRequest({reqtype: "save", url: url, list: val});
 		} else if (val == 2) {
 			if (selected) chrome.extension.sendRequest({reqtype: "remove-temp", url: url});
@@ -542,7 +544,7 @@ function save(url, el, type) {
 		}
 	}
 	bkg.triggerUpdated();
-	if (url == tabdomain) chrome.extension.sendRequest({reqtype: "refresh-page-icon", tid: tabid, type: val});
+	if (url === tabdomain) chrome.extension.sendRequest({reqtype: "refresh-page-icon", tid: tabid, type: val});
 	if (closepage == 'true') window.close();
 	else {
 		var urlfriendly = url.replace(/[.\[\]:]/g,"_");
@@ -606,10 +608,10 @@ function save(url, el, type) {
 			} else {
 				if (!selected) {
 					el.addClass('selected');
-					if (url == tabdomain && !el.parent().hasClass("fpchoices")) $(".pbypass").addClass('selected').show();
+					if (url === tabdomain && !el.parent().hasClass("fpchoices")) $(".pbypass").addClass('selected').show();
 				} else {
-					if (url == tabdomain && !el.parent().hasClass("fpchoices")) $(".pbypass").removeClass('selected').show();
-					if ($(".x_blacklist", el.parent()).text() == 'Unwanted') $(".x_blacklist", el.parent()).addClass("selected");
+					if (url === tabdomain && !el.parent().hasClass("fpchoices")) $(".pbypass").removeClass('selected').show();
+					if ($(".x_blacklist", el.parent()).text() === 'Unwanted') $(".x_blacklist", el.parent()).addClass("selected");
 				}
 				$(".x_bypass", el.parent()).show();
 			}

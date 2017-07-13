@@ -65,6 +65,9 @@ function initWebRTC() {
 		});
 	}
 }
+function getWebRTC() {
+	return webrtcsupport;
+}
 function testWebRTC(rtcstatus) {
 	document.getElementById('webrtc').remove();
 	webrtcsupport = rtcstatus;
@@ -397,6 +400,31 @@ function domainCheck(domain, req) {
 		if (localStorage['annoyances'] === true && localStorage['annoyancesmode'] === 'relaxed' && baddiesCheck) return 1;
 	}
 	return -1;
+}
+function domainSort(hosts) {
+    var sorted_hosts = [];
+    var split_hosts = [];
+    if (hosts.length > 0) {
+    	if (typeof hosts[0] === 'object') {
+        	for (var h in hosts) {
+        			split_hosts.push([getDomain(hosts[h][2]), hosts[h][0], hosts[h][1], hosts[h][2], hosts[h][3], hosts[h][4], hosts[h][5], hosts[h][6]]);
+        		}
+        	split_hosts.sort();
+        	for (var h in split_hosts) {
+        			sorted_hosts.push([split_hosts[h][1], split_hosts[h][2], split_hosts[h][3], split_hosts[h][4], split_hosts[h][5], split_hosts[h][6], split_hosts[h][7]]);
+        		}
+        } else {
+        	for (var h in hosts) {
+        			split_hosts.push([getDomain(hosts[h]), hosts[h]]);
+        		}
+        	split_hosts.sort();
+        	for (var h in split_hosts) {
+        			sorted_hosts.push(split_hosts[h][1]);
+        		}
+        }
+        return sorted_hosts;
+    }
+    return hosts;
 }
 /**
  * @param {string} domain
@@ -874,6 +902,8 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
             antisocial: localStorage['antisocial'],
             whitelist: whiteList,
             blacklist: blackList,
+			mappedWhitelist: domainMappedWhiteList,
+			mappedBlacklist: domainMappedBlackList,
             whitelistSession: sessionWhiteList,
             blackListSession: sessionBlackList,
             script: localStorage['script'],
@@ -906,6 +936,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
             referrerspoofdenywhitelisted: localStorage['referrerspoofdenywhitelisted'],
             linktarget: localStorage['linktarget'],
             paranoia: localStorage['paranoia'],
+            superParanoia: localStorage['superParanoia'],
             clipboard: localStorage['clipboard'],
             dataurl: localStorage['dataurl']
         });
@@ -1527,6 +1558,9 @@ function getLocale(str) {
 	} else {
 		return chrome.i18n.getMessage(str);
 	}
+}
+function getLangs() {
+	return langs;
 }
 var uiLang = chrome.i18n.getUILanguage().replace(/-/g, '_');
 if (!optionExists("locale")) {

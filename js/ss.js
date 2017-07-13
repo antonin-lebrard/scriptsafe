@@ -9,7 +9,7 @@ var timestamp = Math.round(new Date().getTime()/1000.0);
 var linktrgt;
 // initialize settings object with default settings (that are overwritten by the actual user-set values later on)
 /**
- * @type {{MODE: string, LISTSTATUS: boolean, DOMAINSTATUS: number, WHITELIST: Array, BLACKLIST: Array, WHITELISTSESSION: Array, BLACKLISTSESSION: Array, SCRIPT: boolean, NOSCRIPT: boolean, OBJECT: boolean, APPLET: boolean, EMBED: boolean, IFRAME: boolean, FRAME: boolean, AUDIO: boolean, VIDEO: boolean, IMAGE: boolean, CANVAS: boolean, CANVASFONT: boolean, CLIENTRECTS: boolean, AUDIOBLOCK: boolean, BATTERY: boolean, WEBGL: boolean, KEYBOARD: boolean, WEBRTCDEVICE: boolean, GAMEPAD: boolean, WEBVR: boolean, BLUETOOTH: boolean, TIMEZONE: boolean, ANNOYANCES: boolean, ANNOYANCESMODE: string, ANTISOCIAL: boolean, PRESERVESAMEDOMAIN: *, WEBBUGS: boolean, LINKTARGET: string, EXPERIMENTAL: number, REFERRER: *, REFERRERSPOOFDENYWHITELISTED: boolean, PARANOIA: boolean, CLIPBOARD: boolean, DATAURL: boolean, KEYDELTA: number}}
+ * @type {{MODE: string, LISTSTATUS: boolean, DOMAINSTATUS: number, WHITELIST: Array, BLACKLIST: Array, WHITELISTSESSION: Array, MAPPEDWHITELIST: Object, MAPPEDBLACKLIST: Object, BLACKLISTSESSION: Array, SCRIPT: boolean, NOSCRIPT: boolean, OBJECT: boolean, APPLET: boolean, EMBED: boolean, IFRAME: boolean, FRAME: boolean, AUDIO: boolean, VIDEO: boolean, IMAGE: boolean, CANVAS: boolean, CANVASFONT: boolean, CLIENTRECTS: boolean, AUDIOBLOCK: boolean, BATTERY: boolean, WEBGL: boolean, KEYBOARD: boolean, WEBRTCDEVICE: boolean, GAMEPAD: boolean, WEBVR: boolean, BLUETOOTH: boolean, TIMEZONE: boolean, ANNOYANCES: boolean, ANNOYANCESMODE: string, ANTISOCIAL: boolean, PRESERVESAMEDOMAIN: *, WEBBUGS: boolean, LINKTARGET: string, EXPERIMENTAL: number, REFERRER: *, REFERRERSPOOFDENYWHITELISTED: boolean, PARANOIA: boolean, SUPERPARANOIA: boolean, CLIPBOARD: boolean, DATAURL: boolean, KEYDELTA: number}}
  */
 var SETTINGS = {
 	MODE: "block",
@@ -17,6 +17,8 @@ var SETTINGS = {
 	DOMAINSTATUS: -1,
 	WHITELIST: [],
 	BLACKLIST: [],
+    MAPPEDWHITELIST: {},
+    MAPPEDBLACKLIST: {},
 	WHITELISTSESSION: [],
 	BLACKLISTSESSION: [],
 	SCRIPT: true,
@@ -51,6 +53,7 @@ var SETTINGS = {
 	REFERRER: true,
 	REFERRERSPOOFDENYWHITELISTED: true,
 	PARANOIA: true,
+    SUPERPARANOIA: true,
 	CLIPBOARD: false,
 	DATAURL: true,
 	KEYDELTA: 0,
@@ -66,6 +69,8 @@ chrome.extension.sendRequest({reqtype: "get-settings", iframe: iframe}, function
 		SETTINGS.ANTISOCIAL = response.antisocial;
 		SETTINGS.WHITELIST = response.whitelist;
 		SETTINGS.BLACKLIST = response.blacklist;
+		SETTINGS.MAPPEDWHITELIST = response.mappedWhitelist;
+		SETTINGS.MAPPEDBLACKLIST = response.mappedBlacklist;
 		SETTINGS.WHITELISTSESSION = response.whitelistSession;
 		SETTINGS.BLACKLISTSESSION = response.blackListSession;
 		SETTINGS.SCRIPT = response.script;
@@ -124,6 +129,7 @@ chrome.extension.sendRequest({reqtype: "get-settings", iframe: iframe}, function
 		SETTINGS.REFERRER = response.referrer;
 		SETTINGS.REFERRERSPOOFDENYWHITELISTED = response.referrerspoofdenywhitelisted;
 		SETTINGS.PARANOIA = response.paranoia;
+		SETTINGS.SUPERPARANOIA = response.superParanoia;
 		SETTINGS.DATAURL = response.dataurl;
 		SETTINGS.KEYBOARD = response.keyboard;
 		SETTINGS.KEYDELTA = parseInt(response.keydelta);
@@ -555,7 +561,7 @@ function postLoadCheck(elSrc) {
 		    thirdPartyCheck = thirdParty(elSrc);
 
 		var settingDomainCheckStatus = SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true;
-        var domainStatus = domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && SETTINGS.MODE === block));
+        var domainStatus = domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && SETTINGS.MODE === 'block'));
         var annoyanceStatus = (SETTINGS.ANNOYANCES === true && (SETTINGS.ANNOYANCESMODE === 'strict' || (SETTINGS.ANNOYANCESMODE === 'relaxed' && domainCheckStatus !== 0))) && baddiesCheck === 1;
 		var antisocialStatus = SETTINGS.ANTISOCIAL === true && baddiesCheck === 2;
         elementStatusCheck = settingDomainCheckStatus || domainStatus || annoyanceStatus || antisocialStatus;
@@ -565,7 +571,7 @@ function postLoadCheck(elSrc) {
 /**
  * @param {string} domain
  * @param {number} req
- * @returns {number}
+ * @returns {number} -1 = unknown, 0 = allow, 1 = block
  */
 function domainCheck(domain, req) {
 	if (!domain) return -1;
@@ -573,6 +579,8 @@ function domainCheck(domain, req) {
 		var baddiesCheck = baddies(domain, SETTINGS.ANNOYANCESMODE, SETTINGS.ANTISOCIAL);
 		if ((SETTINGS.ANNOYANCES === true && SETTINGS.ANNOYANCESMODE === 'strict' && baddiesCheck === 1) || (SETTINGS.ANTISOCIAL === true && baddiesCheck === 2))
 		    return 1;
+        if (SETTINGS.ANNOYANCES === true && SETTINGS.ANNOYANCESMODE === 'relaxed' && baddiesCheck)
+            return 1;
 	}
 	var domainname = extractDomainFromURL(domain);
 	if (req !== 2) {
@@ -581,11 +589,23 @@ function domainCheck(domain, req) {
 	}
 	if (in_array(domainname, SETTINGS.WHITELIST)) return 0;
 	if (in_array(domainname, SETTINGS.BLACKLIST)) return 1;
-	if (req === undefined) {
-		if (SETTINGS.ANNOYANCES === true && SETTINGS.ANNOYANCESMODE === 'relaxed' && baddiesCheck)
-		    return 1;
-	}
+
 	return -1;
+}
+/**
+ * @param domainFrom
+ * @param domainToCheck
+ * @returns {number} -1 = unknown, 0 = allow, 1 = block
+ */
+function domainMappedCheck(domainFrom, domainToCheck){
+    if (!domainFrom || !domainToCheck) return -1;
+    if (SETTINGS.SUPERPARANOIA){
+        var domainFromName = extractDomainFromURL(domainFrom);
+        var domainName = extractDomainFromURL(domainToCheck);
+        if (in_array(domainName, SETTINGS.MAPPEDWHITELIST[domainFromName])) return 0;
+        if (in_array(domainName, SETTINGS.MAPPEDBLACKLIST[domainFromName])) return 1;
+    }
+    return -1;
 }
 function relativeToAbsoluteUrl(url) { // credit: NotScripts
 	if (!url || url.indexOf('://') !== -1)
@@ -775,8 +795,11 @@ function block(event) {
 	elSrc = elSrc.toLowerCase();
 	var absoluteUrl = relativeToAbsoluteUrl(elSrc);
 	if (absoluteUrl.substr(0,4) !== 'http') return;
-	var thirdPartyCheck;
+    /** {boolean} */
+    var thirdPartyCheck;
+	/** {boolean} */
 	var elementStatusCheck;
+	/** {number} */
 	var domainCheckStatus;
 	var $el = $(el);
 	var elWidth = $el.attr('width');
@@ -786,7 +809,7 @@ function block(event) {
 	if (SETTINGS.DOMAINSTATUS === 1 || (SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true && SETTINGS.PRESERVESAMEDOMAIN === false)) {
 		elementStatusCheck = true;
 		thirdPartyCheck = true;
-		domainCheckStatus = '1';
+		domainCheckStatus = 1;
 	} else {
 		domainCheckStatus = domainCheck(absoluteUrl, 1);
 		var elementDomain = extractDomainFromURL(absoluteUrl);
@@ -796,11 +819,12 @@ function block(event) {
 		else if (SETTINGS.PRESERVESAMEDOMAIN === 'strict' && elementDomain !== window.location.hostname)
 		    thirdPartyCheck = true;
 		else thirdPartyCheck = thirdParty(absoluteUrl);
+		var mappedDomainStatus = SETTINGS.SUPERPARANOIA ? domainMappedCheck(window.location.href, absoluteUrl) : false;
         var settingDomainCheckStatus = SETTINGS.DOMAINSTATUS === -1 && SETTINGS.MODE === 'block' && SETTINGS.PARANOIA === true;
-        var domainStatus = domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && SETTINGS.MODE === block));
+        var domainStatus = domainCheckStatus !== 0 && (domainCheckStatus === 1 || (domainCheckStatus === -1 && SETTINGS.MODE === 'block'));
         var annoyanceStatus = (SETTINGS.ANNOYANCES === true && (SETTINGS.ANNOYANCESMODE === 'strict' || (SETTINGS.ANNOYANCESMODE === 'relaxed' && domainCheckStatus !== 0))) && baddiesCheck === 1;
         var antisocialStatus = SETTINGS.ANTISOCIAL === true && baddiesCheck === 2;
-        elementStatusCheck = settingDomainCheckStatus || domainStatus || annoyanceStatus || antisocialStatus;
+        elementStatusCheck = settingDomainCheckStatus || domainStatus || mappedDomainStatus || annoyanceStatus || antisocialStatus;
     }
 	if (elementStatusCheck && (
 		(

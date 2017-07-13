@@ -355,7 +355,8 @@ function loadOptions() {
 	loadCheckbox("utm");
 	loadCheckbox("hashchecking");
 	loadElement("webrtc");
-	if (!bkg.getWebRTC()) $("#webrtccell").html('<strong style="color: red;">'+bkg.getLocale("nowebrtc")+'</strong>');
+	if (!bkg.getWebRTC())
+		$("#webrtccell").html('<strong style="color: red;">'+bkg.getLocale("nowebrtc")+'</strong>');
 	loadElement("preservesamedomain");
 	loadCheckbox("paranoia");
 	loadCheckbox("clipboard");
